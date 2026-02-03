@@ -7,6 +7,7 @@ import (
 	"github.com/liberal-boy/tls-shunt-proxy/config"
 	"github.com/liberal-boy/tls-shunt-proxy/handler"
 	"github.com/liberal-boy/tls-shunt-proxy/sniffer"
+	"github.com/liberal-boy/tls-shunt-proxy/webui"
 	"github.com/stevenjohnstone/sni"
 	"log"
 	"net"
@@ -22,6 +23,9 @@ func main() {
 
 	configPath := flag.String("config", "./config.yaml", "Path to config file")
 	flag.Parse()
+
+	// 启动内置管理界面（绑定到 127.0.0.1:8080），使用相同的配置文件路径
+	webui.Start(*configPath)
 
 	var err error
 	conf, err = config.ReadConfig(*configPath)
