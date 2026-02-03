@@ -17,6 +17,8 @@ type (
 		RedirectHttps string
 		Fallback      handler.Handler
 		VHosts        map[string]VHost
+		// WebUIListen: 管理界面监听地址，来自 raw config (webui_listen)
+		WebUIListen   string
 	}
 	VHost struct {
 		TlsConfig    *tls.Config
@@ -55,6 +57,7 @@ func ReadConfig(path string) (conf Config, err error) {
 
 	conf.Listen = rawConf.Listen
 	conf.RedirectHttps = rawConf.RedirectHttps
+	conf.WebUIListen = rawConf.WebUIListen
 	if rawConf.Fallback != "" {
 		conf.Fallback = handler.NewProxyPassHandler(rawConf.Fallback)
 	} else {
@@ -108,8 +111,6 @@ func newHandler(name, args string) handler.Handler {
 		return handler.NewFileServerHandler(args)
 	case "dohServer":
 		return handler.NewDohServer(args)
-	default:
-		log.Fatalf("handler %s not supported\n", name)
 	}
-	return nil
+	return handler.NoopHandler
 }
