@@ -7,6 +7,8 @@ type (
 		InboundBufferSize, OutboundBufferSize int
 		Fallback                              string
 		VHosts                                []RawVHost
+		// WebUIListen: 管理界面监听地址，示例 127.0.0.1:8080
+		WebUIListen                           string
 	}
 	RawVHost struct {
 		Name          string
