@@ -2,6 +2,8 @@ package webui
 
 import (
 	"encoding/base64"
+	"encoding/json"
+	"fmt"
 	"html/template"
 	"io"
 	"io/ioutil"
@@ -9,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"github.com/liberal-boy/tls-shunt-proxy/config/raw"
 	"gopkg.in/yaml.v2"
 )
 
@@ -18,6 +21,93 @@ func Start(configPath string) {
 	tmpl := template.Must(template.ParseFiles("webui/templates/index.html"))
 
 	mux := http.NewServeMux()
+
+	// API: 获取当前配置
+	mux.HandleFunc("/api/config", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "仅支持 GET", http.StatusMethodNotAllowed)
+			return
+		}
+		data, err := ioutil.ReadFile(configPath)
+		if err != nil {
+			http.Error(w, "读取配置失败: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]string{"config": string(data)})
+	})
+
+	// API: 验证 Cloudflare 凭据
+	mux.HandleFunc("/api/validate-cloudflare", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "仅支持 POST", http.StatusMethodNotAllowed)
+			return
+		}
+		var req struct {
+			APIKey    string `json:"api_key"`
+			AccountID string `json:"account_id"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			http.Error(w, "解析请求失败: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		api := NewCloudflareAPI(req.APIKey, req.AccountID)
+		valid, message, err := api.VerifyCredentials()
+		if err != nil {
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"valid":   false,
+				"message": err.Error(),
+			})
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"valid":   valid,
+			"message": message,
+		})
+	})
+
+	// API: 生成配置
+	mux.HandleFunc("/api/generate-config", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "仅支持 POST", http.StatusMethodNotAllowed)
+			return
+		}
+		var formData raw.WizardFormData
+		if err := json.NewDecoder(r.Body).Decode(&formData); err != nil {
+			http.Error(w, "解析请求失败: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		config := generateConfigFromWizard(&formData)
+		yamlData, err := yaml.Marshal(config)
+		if err != nil {
+			http.Error(w, "生成配置失败: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]string{"config": string(yamlData)})
+	})
+
+	// API: 获取支持的架构列表
+	mux.HandleFunc("/api/architectures", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "仅支持 GET", http.StatusMethodNotAllowed)
+			return
+		}
+		architectures := []map[string]string{
+			{"value": "amd64", "label": "AMD64 (Intel/AMD 64位)", "description": "适用于大多数现代服务器"},
+			{"value": "arm64", "label": "ARM64 (64位 ARM)", "description": "适用于树莓派 4+、Apple Silicon 等"},
+			{"value": "386", "label": "386 (Intel 32位)", "description": "适用于老旧 32位系统"},
+			{"value": "arm", "label": "ARM (32位)", "description": "适用于树莓派 1-3 等"},
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(architectures)
+	})
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
@@ -109,4 +199,76 @@ func basicAuthMiddleware(next http.Handler) http.Handler {
 		}
 		next.ServeHTTP(w, r)
 	})
+}
+
+// generateConfigFromWizard 根据 Wizard 表单数据生成配置
+func generateConfigFromWizard(formData *raw.WizardFormData) *raw.ConfigTemplate {
+	config := &raw.ConfigTemplate{
+		Listen:             "0.0.0.0:443",
+		RedirectHttps:      "0.0.0.0:80",
+		InboundBufferSize:  4,
+		OutboundBufferSize: 32,
+		Fallback:           "127.0.0.1:8443",
+		WebUIListen:        "127.0.0.1:8080",
+		VHosts:             []raw.RawVHost{},
+	}
+
+	// 创建虚拟主机配置
+	vhost := raw.RawVHost{
+		Name:          formData.Domain,
+		TlsOffloading: true,
+		ManagedCert:   true,
+		KeyType:       "p256",
+		Alpn:          "h2,http/1.1",
+		Protocols:     "tls12,tls13",
+		Http: raw.RawHttpHandler{
+			Paths: []raw.RawPathHandler{},
+		},
+		Http2:  []raw.RawPathHandler{},
+		Trojan: raw.RawHandler{},
+		Default: raw.RawHandler{
+			Handler: "proxyPass",
+			Args:    fmt.Sprintf("127.0.0.1:%d", formData.DefaultBackendPort),
+		},
+	}
+
+	// 配置 HTTP 处理
+	if formData.EnableHTTP {
+		if formData.HTTPBackendPort > 0 {
+			vhost.Http.Paths = append(vhost.Http.Paths, raw.RawPathHandler{
+				Path:    "/",
+				Handler: "proxyPass",
+				Args:    fmt.Sprintf("127.0.0.1:%d", formData.HTTPBackendPort),
+			})
+		}
+		if formData.StaticFilePath != "" {
+			vhost.Http.Paths = append(vhost.Http.Paths, raw.RawPathHandler{
+				Path:       "/static/",
+				Handler:    "fileServer",
+				Args:       formData.StaticFilePath,
+				TrimPrefix: "/static",
+			})
+		}
+	}
+
+	// 配置 HTTP/2 处理
+	if formData.EnableHTTP2 && formData.HTTP2BackendPort > 0 {
+		vhost.Http2 = append(vhost.Http2, raw.RawPathHandler{
+			Path:    "/",
+			Handler: "proxyPass",
+			Args:    fmt.Sprintf("h2c://localhost:%d", formData.HTTP2BackendPort),
+		})
+	}
+
+	// 配置 Trojan 处理
+	if formData.EnableTrojan && formData.TrojanBackendPort > 0 {
+		vhost.Trojan = raw.RawHandler{
+			Handler: "proxyPass",
+			Args:    fmt.Sprintf("127.0.0.1:%d", formData.TrojanBackendPort),
+		}
+	}
+
+	config.VHosts = append(config.VHosts, vhost)
+
+	return config
 }

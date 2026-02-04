@@ -1,0 +1,947 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TLS-Shunt-Proxy 配置管理</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* 顶部菜单栏 */
+        .navbar {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 15px 30px;
+            box-shadow: 0 2px 20px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+        .navbar-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .navbar-brand h1 {
+            color: #333;
+            font-size: 20px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .navbar-brand .icon {
+            font-size: 24px;
+        }
+        .navbar-menu {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 10px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+        .btn-secondary {
+            background: white;
+            color: #667eea;
+            border: 2px solid #667eea;
+            padding: 10px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .btn-secondary:hover {
+            background: #f0f0ff;
+        }
+
+        /* 主内容区域 */
+        .main-content {
+            flex: 1;
+            padding: 30px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+        }
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            padding: 40px;
+            animation: fadeIn 0.5s ease;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* 配置编辑器区域 */
+        .editor-section {
+            display: none;
+        }
+        .editor-section.active {
+            display: block;
+        }
+        .editor-header {
+            margin-bottom: 25px;
+        }
+        .editor-header h2 {
+            color: #333;
+            font-size: 24px;
+            margin-bottom: 8px;
+        }
+        .editor-header p {
+            color: #666;
+            font-size: 14px;
+        }
+        .info-box {
+            background: linear-gradient(135deg, #e7f3ff 0%, #f0f7ff 100%);
+            border-left: 4px solid #2196F3;
+            padding: 15px 20px;
+            margin-bottom: 25px;
+            border-radius: 8px;
+        }
+        .info-box p {
+            color: #0d47a1;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        .form-group {
+            margin-bottom: 25px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 10px;
+            color: #333;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        textarea {
+            width: 100%;
+            min-height: 400px;
+            padding: 18px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+            resize: vertical;
+            background: #f9f9f9;
+            transition: all 0.3s ease;
+        }
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        .button-group {
+            display: flex;
+            gap: 12px;
+            margin-top: 25px;
+        }
+        .btn-save {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 32px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+        .btn-save:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+        .btn-save:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .btn-reset {
+            background: #f0f0f0;
+            color: #333;
+            border: none;
+            padding: 12px 32px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .btn-reset:hover {
+            background: #e0e0e0;
+        }
+
+        /* Wizard 区域 */
+        .wizard-section {
+            display: none;
+        }
+        .wizard-section.active {
+            display: block;
+        }
+        .wizard-header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        .wizard-header h2 {
+            color: #333;
+            font-size: 28px;
+            margin-bottom: 12px;
+        }
+        .wizard-header p {
+            color: #666;
+            font-size: 16px;
+        }
+        .wizard-progress {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+        .progress-step {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            color: #999;
+            background: #f0f0f0;
+            transition: all 0.3s ease;
+        }
+        .progress-step.active {
+            color: white;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .progress-step.completed {
+            color: #4caf50;
+            background: #e8f5e9;
+        }
+        .progress-step-number {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+        }
+
+        /* Wizard 步骤内容 */
+        .wizard-step {
+            display: none;
+        }
+        .wizard-step.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+        .wizard-step-content {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .wizard-input-group {
+            margin-bottom: 25px;
+        }
+        .wizard-input-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        .wizard-input-group input[type="text"],
+        .wizard-input-group input[type="password"] {
+            width: 100%;
+            padding: 14px 18px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 15px;
+            transition: all 0.3s ease;
+        }
+        .wizard-input-group input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        .wizard-input-group .help-text {
+            color: #666;
+            font-size: 13px;
+            margin-top: 6px;
+        }
+        .wizard-input-group .error-text {
+            color: #f44336;
+            font-size: 13px;
+            margin-top: 6px;
+            display: none;
+        }
+        .wizard-input-group.error input {
+            border-color: #f44336;
+        }
+        .wizard-input-group.error .error-text {
+            display: block;
+        }
+
+        /* 架构选择卡片 */
+        .architecture-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .architecture-card {
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            padding: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: white;
+        }
+        .architecture-card:hover {
+            border-color: #667eea;
+            box-shadow: 0 4px 20px rgba(102, 126, 234, 0.2);
+        }
+        .architecture-card.selected {
+            border-color: #667eea;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
+        }
+        .architecture-card .icon {
+            font-size: 36px;
+            margin-bottom: 15px;
+        }
+        .architecture-card h3 {
+            color: #333;
+            font-size: 18px;
+            margin-bottom: 8px;
+        }
+        .architecture-card p {
+            color: #666;
+            font-size: 14px;
+        }
+
+        /* Wizard 按钮 */
+        .wizard-buttons {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 40px;
+            padding-top: 30px;
+            border-top: 1px solid #e0e0e0;
+        }
+        .btn-back {
+            background: #f0f0f0;
+            color: #333;
+            border: none;
+            padding: 12px 32px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .btn-back:hover {
+            background: #e0e0e0;
+        }
+        .btn-next {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 32px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+        .btn-next:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+        .btn-next:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* 消息提示 */
+        .message {
+            margin-top: 25px;
+            padding: 15px 20px;
+            border-radius: 8px;
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+        .message.success {
+            background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .message.error {
+            background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .message.info {
+            background: linear-gradient(135deg, #e7f3ff 0%, #f0f7ff 100%);
+            color: #0d47a1;
+            border: 1px solid #b3d9ff;
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .navbar {
+                padding: 12px 20px;
+            }
+            .navbar-brand h1 {
+                font-size: 16px;
+            }
+            .container {
+                padding: 25px;
+            }
+            .architecture-grid {
+                grid-template-columns: 1fr;
+            }
+            .wizard-buttons {
+                flex-direction: column-reverse;
+                gap: 12px;
+            }
+            .wizard-buttons button {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 顶部菜单栏 -->
+    <nav class="navbar">
+        <div class="navbar-brand">
+            <span class="icon">🔧</span>
+            <h1>TLS-Shunt-Proxy</h1>
+        </div>
+        <div class="navbar-menu">
+            <button class="btn-primary" id="btnNewConfig" onclick="showWizard()">
+                <span>✨</span>
+                <span>新建配置</span>
+            </button>
+            <button class="btn-secondary" id="btnEditConfig" onclick="showEditor()" style="display: none;">
+                <span>📝</span>
+                <span>编辑配置</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- 主内容区域 -->
+    <div class="main-content">
+        <div class="container">
+            <!-- 配置编辑器区域 -->
+            <div class="editor-section active" id="editorSection">
+                <div class="editor-header">
+                    <h2>📝 配置编辑器</h2>
+                    <p>在线编辑配置文件，保存后自动重启服务</p>
+                </div>
+
+                <div class="info-box">
+                    <p><strong>ℹ️ 提示：</strong>修改配置后点击"保存配置"按钮，服务将自动重启以应用新配置。请确保配置文件格式正确。</p>
+                </div>
+
+                <form method="POST" action="/save" id="configForm">
+                    <div class="form-group">
+                        <label for="config">配置文件 (YAML 格式):</label>
+                        <textarea name="config" id="config" spellcheck="false">{{.ConfigYAML}}</textarea>
+                    </div>
+
+                    <div class="button-group">
+                        <button type="submit" class="btn-save" id="saveBtn">💾 保存配置</button>
+                        <button type="button" class="btn-reset" onclick="resetConfig()">↺ 重置</button>
+                    </div>
+                </form>
+
+                <div class="message" id="message"></div>
+            </div>
+
+            <!-- Wizard 区域 -->
+            <div class="wizard-section" id="wizardSection">
+                <div class="wizard-header">
+                    <h2>✨ 新建配置向导</h2>
+                    <p>按照以下步骤快速创建 TLS-Shunt-Proxy 配置</p>
+                </div>
+
+                <div class="wizard-progress">
+                    <div class="progress-step active" id="progressStep1">
+                        <div class="progress-step-number">1</div>
+                        <span>域名</span>
+                    </div>
+                    <div class="progress-step" id="progressStep2">
+                        <div class="progress-step-number">2</div>
+                        <span>Cloudflare</span>
+                    </div>
+                    <div class="progress-step" id="progressStep3">
+                        <div class="progress-step-number">3</div>
+                        <span>架构</span>
+                    </div>
+                </div>
+
+                <!-- 步骤 1: 域名输入 -->
+                <div class="wizard-step active" id="wizardStep1">
+                    <div class="wizard-step-content">
+                        <div class="wizard-input-group" id="domainGroup">
+                            <label for="domainInput">域名</label>
+                            <input type="text" id="domainInput" placeholder="example.com" oninput="validateDomain()">
+                            <p class="help-text">请输入您要配置的域名</p>
+                            <p class="error-text">请输入有效的域名</p>
+                        </div>
+
+                        <div class="wizard-input-group" id="serverIPGroup">
+                            <label for="serverIPInput">服务器 IP 地址</label>
+                            <input type="text" id="serverIPInput" placeholder="1.2.3.4" oninput="validateServerIP()">
+                            <p class="help-text">您的服务器公网 IP 地址</p>
+                            <p class="error-text">请输入有效的 IP 地址</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 步骤 2: Cloudflare 信息 -->
+                <div class="wizard-step" id="wizardStep2">
+                    <div class="wizard-step-content">
+                        <div class="wizard-input-group" id="apiKeyGroup">
+                            <label for="apiKeyInput">Cloudflare API Key</label>
+                            <input type="password" id="apiKeyInput" placeholder="您的 Cloudflare API Key">
+                            <p class="help-text">具有 DNS 权限的 API Token</p>
+                            <p class="error-text">请输入有效的 API Key</p>
+                        </div>
+
+                        <div class="wizard-input-group" id="accountIdGroup">
+                            <label for="accountIdInput">Cloudflare Account ID</label>
+                            <input type="text" id="accountIdInput" placeholder="您的 Account ID">
+                            <p class="help-text">可以在 Cloudflare 仪表板的右侧边栏找到</p>
+                            <p class="error-text">请输入有效的 Account ID</p>
+                        </div>
+
+                        <button type="button" class="btn-secondary" style="width: 100%; margin-top: 15px;" onclick="testCloudflareConnection()">
+                            <span>🔗</span>
+                            <span>测试连接</span>
+                        </button>
+
+                        <div class="message" id="cloudflareMessage"></div>
+                    </div>
+                </div>
+
+                <!-- 步骤 3: 架构选择 -->
+                <div class="wizard-step" id="wizardStep3">
+                    <div class="wizard-step-content">
+                        <label style="display: block; margin-bottom: 15px; color: #333; font-weight: 600; font-size: 14px;">选择服务器架构</label>
+                        <div class="architecture-grid" id="architectureGrid">
+                            <!-- 架构卡片将通过 JavaScript 动态生成 -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Wizard 按钮 -->
+                <div class="wizard-buttons">
+                    <button type="button" class="btn-back" id="btnBack" onclick="previousStep()" style="display: none;">
+                        ← 上一步
+                    </button>
+                    <button type="button" class="btn-next" id="btnNext" onclick="nextStep()">
+                        下一步 →
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 全局变量
+        let currentStep = 1;
+        const totalSteps = 3;
+        let wizardData = {
+            domain: '',
+            serverIP: '',
+            cloudflareApiKey: '',
+            cloudflareAccountId: '',
+            architecture: ''
+        };
+
+        // 页面加载时初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            loadArchitectures();
+            loadWizardData();
+        });
+
+        // 显示编辑器
+        function showEditor() {
+            document.getElementById('editorSection').classList.add('active');
+            document.getElementById('wizardSection').classList.remove('active');
+            document.getElementById('btnNewConfig').style.display = 'flex';
+            document.getElementById('btnEditConfig').style.display = 'none';
+        }
+
+        // 显示 Wizard
+        function showWizard() {
+            document.getElementById('editorSection').classList.remove('active');
+            document.getElementById('wizardSection').classList.add('active');
+            document.getElementById('btnNewConfig').style.display = 'none';
+            document.getElementById('btnEditConfig').style.display = 'flex';
+            resetWizard();
+        }
+
+        // 重置 Wizard
+        function resetWizard() {
+            currentStep = 1;
+            wizardData = {
+                domain: '',
+                serverIP: '',
+                cloudflareApiKey: '',
+                cloudflareAccountId: '',
+                architecture: ''
+            };
+            document.getElementById('domainInput').value = '';
+            document.getElementById('serverIPInput').value = '';
+            document.getElementById('apiKeyInput').value = '';
+            document.getElementById('accountIdInput').value = '';
+            document.querySelectorAll('.architecture-card').forEach(card => card.classList.remove('selected'));
+            updateWizardUI();
+        }
+
+        // 验证域名
+        function validateDomain() {
+            const domain = document.getElementById('domainInput').value.trim();
+            const group = document.getElementById('domainGroup');
+            const domainRegex = /^([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$/;
+
+            if (domainRegex.test(domain)) {
+                group.classList.remove('error');
+                wizardData.domain = domain;
+                return true;
+            } else {
+                group.classList.add('error');
+                return false;
+            }
+        }
+
+        // 验证服务器 IP
+        function validateServerIP() {
+            const ip = document.getElementById('serverIPInput').value.trim();
+            const group = document.getElementById('serverIPGroup');
+            const ipRegex = /^(\d{1,3}\.){3}\d{1,3}$/;
+
+            if (ipRegex.test(ip)) {
+                const parts = ip.split('.');
+                const valid = parts.every(part => parseInt(part) >= 0 && parseInt(part) <= 255);
+                if (valid) {
+                    group.classList.remove('error');
+                    wizardData.serverIP = ip;
+                    return true;
+                }
+            }
+            group.classList.add('error');
+            return false;
+        }
+
+        // 测试 Cloudflare 连接
+        function testCloudflareConnection() {
+            const apiKey = document.getElementById('apiKeyInput').value.trim();
+            const accountId = document.getElementById('accountIdInput').value.trim();
+            const messageDiv = document.getElementById('cloudflareMessage');
+
+            if (!apiKey || !accountId) {
+                showMessage(messageDiv, '请填写完整的 Cloudflare 信息', 'error');
+                return;
+            }
+
+            messageDiv.style.display = 'block';
+            messageDiv.className = 'message info';
+            messageDiv.textContent = '正在验证凭据...';
+
+            fetch('/api/validate-cloudflare', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    api_key: apiKey,
+                    account_id: accountId
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.valid) {
+                    showMessage(messageDiv, '✅ ' + data.message, 'success');
+                    wizardData.cloudflareApiKey = apiKey;
+                    wizardData.cloudflareAccountId = accountId;
+                } else {
+                    showMessage(messageDiv, '❌ ' + data.message, 'error');
+                }
+            })
+            .catch(error => {
+                showMessage(messageDiv, '❌ 验证失败: ' + error.message, 'error');
+            });
+        }
+
+        // 加载架构列表
+        function loadArchitectures() {
+            fetch('/api/architectures')
+                .then(response => response.json())
+                .then(architectures => {
+                    const grid = document.getElementById('architectureGrid');
+                    grid.innerHTML = '';
+                    architectures.forEach(arch => {
+                        const card = document.createElement('div');
+                        card.className = 'architecture-card';
+                        card.dataset.value = arch.value;
+                        card.innerHTML = `
+                            <div class="icon">🖥️</div>
+                            <h3>${arch.label}</h3>
+                            <p>${arch.description}</p>
+                        `;
+                        card.onclick = () => selectArchitecture(arch.value, card);
+                        grid.appendChild(card);
+                    });
+                })
+                .catch(error => {
+                    console.error('加载架构列表失败:', error);
+                });
+        }
+
+        // 选择架构
+        function selectArchitecture(value, card) {
+            document.querySelectorAll('.architecture-card').forEach(c => c.classList.remove('selected'));
+            card.classList.add('selected');
+            wizardData.architecture = value;
+        }
+
+        // 下一步
+        function nextStep() {
+            if (currentStep === 1) {
+                if (!validateDomain() || !validateServerIP()) {
+                    return;
+                }
+            } else if (currentStep === 2) {
+                const apiKey = document.getElementById('apiKeyInput').value.trim();
+                const accountId = document.getElementById('accountIdInput').value.trim();
+                if (!apiKey || !accountId) {
+                    alert('请填写 Cloudflare 信息');
+                    return;
+                }
+                wizardData.cloudflareApiKey = apiKey;
+                wizardData.cloudflareAccountId = accountId;
+            } else if (currentStep === 3) {
+                if (!wizardData.architecture) {
+                    alert('请选择服务器架构');
+                    return;
+                }
+                generateConfig();
+                return;
+            }
+
+            currentStep++;
+            updateWizardUI();
+            saveWizardData();
+        }
+
+        // 上一步
+        function previousStep() {
+            if (currentStep > 1) {
+                currentStep--;
+                updateWizardUI();
+            }
+        }
+
+        // 更新 Wizard UI
+        function updateWizardUI() {
+            // 更新步骤显示
+            for (let i = 1; i <= totalSteps; i++) {
+                const step = document.getElementById('wizardStep' + i);
+                const progress = document.getElementById('progressStep' + i);
+                if (i === currentStep) {
+                    step.classList.add('active');
+                    progress.classList.add('active');
+                } else {
+                    step.classList.remove('active');
+                    progress.classList.remove('active');
+                }
+                if (i < currentStep) {
+                    progress.classList.add('completed');
+                } else {
+                    progress.classList.remove('completed');
+                }
+            }
+
+            // 更新按钮显示
+            document.getElementById('btnBack').style.display = currentStep === 1 ? 'none' : 'block';
+            document.getElementById('btnNext').textContent = currentStep === totalSteps ? '生成配置 ✨' : '下一步 →';
+        }
+
+        // 生成配置
+        function generateConfig() {
+            const formData = {
+                domain: wizardData.domain,
+                cloudflare_api_key: wizardData.cloudflareApiKey,
+                cloudflare_account_id: wizardData.cloudflareAccountId,
+                architecture: wizardData.architecture,
+                server_ip: wizardData.serverIP,
+                enable_http: true,
+                enable_http2: true,
+                enable_trojan: true,
+                http_backend_port: 8080,
+                http2_backend_port: 40000,
+                trojan_backend_port: 4430,
+                default_backend_port: 40001,
+                static_file_path: '/var/www/html'
+            };
+
+            fetch('/api/generate-config', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(formData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('config').value = data.config;
+                showEditor();
+                clearWizardData();
+            })
+            .catch(error => {
+                alert('生成配置失败: ' + error.message);
+            });
+        }
+
+        // 保存 Wizard 数据到 localStorage
+        function saveWizardData() {
+            localStorage.setItem('wizardData', JSON.stringify(wizardData));
+        }
+
+        // 从 localStorage 加载 Wizard 数据
+        function loadWizardData() {
+            const saved = localStorage.getItem('wizardData');
+            if (saved) {
+                try {
+                    wizardData = JSON.parse(saved);
+                    if (wizardData.domain) {
+                        document.getElementById('domainInput').value = wizardData.domain;
+                    }
+                    if (wizardData.serverIP) {
+                        document.getElementById('serverIPInput').value = wizardData.serverIP;
+                    }
+                    if (wizardData.cloudflareApiKey) {
+                        document.getElementById('apiKeyInput').value = wizardData.cloudflareApiKey;
+                    }
+                    if (wizardData.cloudflareAccountId) {
+                        document.getElementById('accountIdInput').value = wizardData.cloudflareAccountId;
+                    }
+                } catch (e) {
+                    console.error('加载 Wizard 数据失败:', e);
+                }
+            }
+        }
+
+        // 清除 Wizard 数据
+        function clearWizardData() {
+            localStorage.removeItem('wizardData');
+        }
+
+        // 显示消息
+        function showMessage(element, text, type) {
+            element.textContent = text;
+            element.className = 'message ' + type;
+            element.style.display = 'block';
+        }
+
+        // 原始配置功能
+        const originalConfig = document.getElementById('config').value;
+
+        function resetConfig() {
+            if (confirm('确定要重置为原始配置吗？所有未保存的修改将丢失。')) {
+                document.getElementById('config').value = originalConfig;
+                hideMessage();
+            }
+        }
+
+        function showMessage(text, type) {
+            const msgDiv = document.getElementById('message');
+            msgDiv.textContent = text;
+            msgDiv.className = 'message ' + type;
+            msgDiv.style.display = 'block';
+        }
+
+        function hideMessage() {
+            document.getElementById('message').style.display = 'none';
+        }
+
+        document.getElementById('configForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const formData = new FormData(this);
+            const textarea = document.getElementById('config');
+            const saveBtn = document.getElementById('saveBtn');
+            textarea.disabled = true;
+            saveBtn.disabled = true;
+
+            fetch('/save', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.text())
+            .then(data => {
+                showMessage('✅ ' + data.trim(), 'success');
+                textarea.disabled = false;
+                saveBtn.disabled = false;
+            })
+            .catch(error => {
+                showMessage('❌ 保存失败: ' + error.message, 'error');
+                textarea.disabled = false;
+                saveBtn.disabled = false;
+            });
+        });
+
+        // 自动保存原始配置到 localStorage
+        if (!localStorage.getItem('tls-shunt-proxy-original-config')) {
+            localStorage.setItem('tls-shunt-proxy-original-config', originalConfig);
+        }
+    </script>
+</body>
+</html>

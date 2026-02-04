@@ -39,4 +39,32 @@ type (
 		Args       string
 		TrimPrefix string
 	}
+
+	// WizardFormData Wizard 表单数据结构
+	WizardFormData struct {
+		Domain               string `json:"domain"`
+		CloudflareAPIKey     string `json:"cloudflare_api_key"`
+		CloudflareAccountID  string `json:"cloudflare_account_id"`
+		Architecture         string `json:"architecture"`
+		ServerIP             string `json:"server_ip"`
+		EnableHTTP           bool   `json:"enable_http"`
+		EnableHTTP2          bool   `json:"enable_http2"`
+		EnableTrojan         bool   `json:"enable_trojan"`
+		HTTPBackendPort      int    `json:"http_backend_port"`
+		HTTP2BackendPort     int    `json:"http2_backend_port"`
+		TrojanBackendPort    int    `json:"trojan_backend_port"`
+		DefaultBackendPort   int    `json:"default_backend_port"`
+		StaticFilePath       string `json:"static_file_path"`
+	}
+
+	// ConfigTemplate 配置模板结构
+	ConfigTemplate struct {
+		Listen              string     `yaml:"listen"`
+		RedirectHttps       string     `yaml:"redirecthttps"`
+		InboundBufferSize   int        `yaml:"inboundbuffersize"`
+		OutboundBufferSize  int        `yaml:"outboundbuffersize"`
+		Fallback            string     `yaml:"fallback"`
+		VHosts              []RawVHost `yaml:"vhosts"`
+		WebUIListen         string     `yaml:"webui_listen"`
+	}
 )

@@ -7,7 +7,6 @@ import (
 	"github.com/liberal-boy/tls-shunt-proxy/handler/http2"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
-	"log"
 	"strings"
 )
 
