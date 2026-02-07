@@ -19,8 +19,8 @@ func init() {
 	certmagic.DefaultACME.Agreed = true
 }
 
-func getTlsConfig(managedCert bool, serverName, cert, key, keyType, alpn, protocols string) (*tls.Config, error) {
-	certificateFunc, err := getCertificateFunc(managedCert, serverName, cert, key, keyType)
+func getTlsConfig(managedCert bool, serverName, cert, key, keyType, alpn, protocols string, wildcardManager *WildcardManager) (*tls.Config, error) {
+	certificateFunc, err := getCertificateFunc(managedCert, serverName, cert, key, keyType, wildcardManager)
 	if err != nil {
 		return nil, err
 	}
@@ -59,7 +59,7 @@ func getTlsConfig(managedCert bool, serverName, cert, key, keyType, alpn, protoc
 	return tlsConfig, nil
 }
 
-func getCertificateFunc(managedCert bool, serverName, cert, key, keyType string) (func(clientHello *tls.ClientHelloInfo) (*tls.Certificate, error), error) {
+func getCertificateFunc(managedCert bool, serverName, cert, key, keyType string, wildcardManager *WildcardManager) (func(clientHello *tls.ClientHelloInfo) (*tls.Certificate, error), error) {
 	var keyGenerator = certmagic.DefaultKeyGenerator
 	if keyType != "" {
 		keyGenerator = certmagic.StandardKeyGenerator{KeyType: certmagic.KeyType(keyType)}
@@ -93,7 +93,21 @@ func getCertificateFunc(managedCert bool, serverName, cert, key, keyType string)
 		}
 	}
 
-	return magic.GetCertificate, nil
+	return func(clientHello *tls.ClientHelloInfo) (*tls.Certificate, error) {
+		// 优先使用通配符证书（如果匹配）
+		if wildcardManager != nil {
+			if wildcardCert := wildcardManager.GetCertificate(clientHello.ServerName); wildcardCert != nil {
+				cert, err := wildcardCert.GetCertificate(clientHello)
+				if err == nil && cert != nil {
+					return cert, nil
+				}
+				// 通配符证书获取失败，记录日志并回退到 vhost 自己的证书
+				log.Printf("⚠️ 通配符证书获取失败 %s: %v，回退到 vhost 证书", clientHello.ServerName, err)
+			}
+		}
+		// 回退到 vhost 自己的证书
+		return magic.GetCertificate(clientHello)
+	}, nil
 }
 
 func getTlsVersion(ver string) uint16 {

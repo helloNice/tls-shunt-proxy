@@ -1,0 +1,135 @@
+# 通配符证书配置示例
+# 此配置展示如何使用 Cloudflare DNS 验证申请通配符证书
+
+listen: 0.0.0.0:443
+redirecthttps: 0.0.0.0:80
+inboundbuffersize: 4
+outboundbuffersize: 32
+fallback: 127.0.0.1:8443
+webui_listen: 127.0.0.1:8080
+
+# 通配符证书配置
+wildcard_certs:
+  # 新配置格式（推荐）- 支持多种 DNS Provider
+  - domain: "*.example.com"
+    dns_provider: cloudflare
+    dns_credentials: '{"api_token": "your_cloudflare_api_token_here"}'
+
+  # 旧配置格式（向后兼容）- 仅支持 Cloudflare
+  - domain: "*.app.example.com"
+    cloudflare_key: "your_cloudflare_api_token_here"
+
+# 虚拟主机配置
+# 注意：所有匹配 *.example.com 的子域名都会自动使用通配符证书
+vhosts:
+  # 这个域名会自动使用 *.example.com 的通配符证书
+  - name: www.example.com
+    tlsoffloading: true
+    managedcert: true  # 即使为 true，也会使用通配符证书
+    keytype: p256
+    alpn: h2,http/1.1
+    protocols: tls12,tls13
+    http:
+      handler: proxyPass
+      args: 127.0.0.1:8080
+    default:
+      handler: proxyPass
+      args: 127.0.0.1:8443
+
+  # 这个域名也会自动使用 *.example.com 的通配符证书
+  - name: api.example.com
+    tlsoffloading: true
+    managedcert: true
+    keytype: p256
+    alpn: h2,http/1.1
+    protocols: tls12,tls13
+    default:
+      handler: proxyPass
+      args: 127.0.0.1:8443
+
+  # 这个域名也会自动使用 *.example.com 的通配符证书
+  - name: app.example.com
+    tlsoffloading: true
+    managedcert: true
+    keytype: p256
+    alpn: h2,http/1.1
+    protocols: tls12,tls13
+    default:
+      handler: proxyPass
+      args: 127.0.0.1:8443
+
+  # 这个域名不匹配任何通配符，会单独申请证书
+  - name: another.domain.com
+    tlsoffloading: true
+    managedcert: true
+    keytype: p256
+    alpn: h2,http/1.1
+    protocols: tls12,tls13
+    default:
+      handler: proxyPass
+      args: 127.0.0.1:8443
+
+# 使用说明：
+#
+# 1. 获取 Cloudflare API Token：
+#    - 登录 Cloudflare 控制台
+#    - 进入 "My Profile" -> "API Tokens"
+#    - 创建新 Token，权限选择 "Zone" -> "DNS" -> "Edit"
+#    - 限制 Zone 资源为你的域名
+#
+# 2. 配置文件：
+#    - 将 your_cloudflare_api_token_here 替换为你的 API Token
+#    - 将 *.example.com 替换为你的通配符域名
+#
+# 3. 启动服务：
+#    - ./tls-shunt-proxy -config config.wildcard.example.yaml
+#
+# 4. 证书存储：
+#    - 通配符证书会自动存储在 ./.caddy 目录下
+#    - 证书会自动续期，无需手动干预
+#
+# 5. 通配符匹配规则：
+#    - *.example.com 匹配 www.example.com、api.example.com 等
+#    - 不匹配 example.com 本身
+#    - 支持多级通配符，如 *.app.example.com
+#
+# 6. 证书优先级：
+#    - 自定义证书（cert + key） > 通配符证书 > 单独申请证书
+#    - 如果为特定子域名配置了自定义证书，将优先使用自定义证书
+#
+# 7. DNS Provider 支持说明：
+#    当前版本支持的 DNS Provider：
+#    ✅ Cloudflare（完整支持）
+#
+#    计划支持的 DNS Provider（未来版本）：
+#    ⏳ 阿里云 DNS
+#    ⏳ 腾讯云 DNS
+#    ⏳ AWS Route 53
+#    ⏳ Google Cloud DNS
+#    ⏳ 其他 libdns 支持的 DNS 服务商
+#
+#    如果需要使用其他 DNS Provider，请：
+#    - 在 config/raw/raw.go 中添加新的配置字段
+#    - 在 config/wildcard.go 的 getDNSProvider 函数中添加对应的处理逻辑
+#    - 在 go.mod 中添加对应的 libdns 依赖
+#
+# 8. 配置格式说明：
+#    新配置格式（推荐）：
+#    wildcard_certs:
+#      - domain: "*.example.com"
+#        dns_provider: cloudflare
+#        dns_credentials: '{"api_token": "your_token"}'
+#
+#    旧配置格式（向后兼容）：
+#    wildcard_certs:
+#      - domain: "*.example.com"
+#        cloudflare_key: "your_token"
+#
+#    两种格式可以混合使用，但建议统一使用新格式
+#
+# 9. 优势：
+#    - 一次申请，多个子域名共用
+#    - 自动续期，无需手动管理
+#    - 减少证书申请次数，避免达到 ACME 速率限制
+#    - 简化配置管理
+#    - 支持多种 DNS Provider（未来）

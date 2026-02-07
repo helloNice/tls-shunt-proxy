@@ -9,6 +9,14 @@ type (
 		VHosts                                []RawVHost
 		// WebUIListen: 管理界面监听地址，示例 127.0.0.1:8080
 		WebUIListen                           string
+		WildcardCerts                         []WildcardCertConfig
+	}
+	WildcardCertConfig struct {
+		Domain        string `yaml:"domain"`
+		DNSProvider   string `yaml:"dns_provider"`    // DNS 提供商类型：cloudflare
+		DNSCredentials string `yaml:"dns_credentials"` // DNS 凭据（JSON 格式）
+		// 保留旧配置字段以向后兼容
+		CloudflareKey string `yaml:"cloudflare_key"`
 	}
 	RawVHost struct {
 		Name          string
