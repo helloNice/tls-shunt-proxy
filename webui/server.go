@@ -30,8 +30,9 @@ func Start(configPath string) {
 		}
 		data, err := ioutil.ReadFile(configPath)
 		if err != nil {
-			http.Error(w, "读取配置失败: "+err.Error(), http.StatusInternalServerError)
-			return
+			// 如果文件不存在或读取失败，返回空配置而不是错误
+			log.Printf("读取配置文件失败: %v，将返回空配置", err)
+			data = []byte("")
 		}
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]string{"config": string(data)})
@@ -116,10 +117,16 @@ func Start(configPath string) {
 		}
 		data, err := ioutil.ReadFile(configPath)
 		if err != nil {
-			http.Error(w, "读取配置失败: "+err.Error(), http.StatusInternalServerError)
-			return
+			// 如果文件不存在或读取失败，显示空配置而不是错误
+			log.Printf("读取配置文件失败: %v，将显示空配置", err)
+			data = []byte("")
 		}
-		_ = tmpl.Execute(w, struct{ ConfigYAML string }{ConfigYAML: string(data)})
+		// 如果文件为空，提供默认的提示信息
+		configText := string(data)
+		if configText == "" {
+			configText = "# 配置文件为空，请使用上方'新建配置'按钮创建配置\n# 或直接在此处编辑 YAML 配置"
+		}
+		_ = tmpl.Execute(w, struct{ ConfigYAML string }{ConfigYAML: configText})
 	})
 
 	mux.HandleFunc("/save", func(w http.ResponseWriter, r *http.Request) {

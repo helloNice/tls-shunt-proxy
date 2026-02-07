@@ -152,3 +152,30 @@ vhosts:
 1. service 启动失败，请使用命令 `sudo setcap "cap_net_bind_service=+ep" /usr/local/bin/tls-shunt-proxy` 给 tls-shunt-proxy 赋予 CAP_NET_BIND_SERVICE 的 capability ，然后 `sudo -u tls-shunt-proxy /usr/local/bin/tls-shunt-proxy -config /etc/tls-shunt-proxy/config.yaml` 运行，获取错误信息
 
 2. `fail to load tls key pair for xxx.xxx: open /xxx/xxx.key: permission denied` 确保用户 `tls-shunt-proxy` 有权读取证书
+
+
+
+
+## 1、需要支持通配
+  - name: game{{ 1 }}.elembeast.com
+    tlsoffloading: true
+    managedcert: true
+    alpn: http/1.1
+    protocols: tls12,tls13
+    http:
+      handler: proxyPass
+      args: 127.0.0.1:8{{ 1 }}
+    default:
+      handler: proxyPass
+      args: 127.0.0.1:8{{ 1 }}
+
+
+## 2、设置证书提前N天开始申请新证书
+具体方案见：CERTIFICATE_ANALYSIS.md
+
+
+## 3、高可用方案见 HIGH_AVAILABILITY 目录
+
+
+# MAP_RODE
+- 修改域名证书相关管理
