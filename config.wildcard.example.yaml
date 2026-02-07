@@ -10,13 +10,59 @@ webui_listen: 127.0.0.1:8080
 
 # 通配符证书配置
 wildcard_certs:
-  # 新配置格式（推荐）- 支持多种 DNS Provider
+  # ==================================================
+  # 场景 1: 默认配置（推荐）
+  # 自动使用 Let's Encrypt 主 + ZeroSSL 备用
+  # ==================================================
   - domain: "*.example.com"
-    dns_provider: cloudflare
+    dns_provider: "cloudflare"
     dns_credentials: '{"api_token": "your_cloudflare_api_token_here"}'
+    email: "admin@example.com"  # ZeroSSL 备用 CA 需要邮箱
+    # 不指定 ca_provider 时，自动使用 Let's Encrypt 主 + ZeroSSL 备用
 
-  # 旧配置格式（向后兼容）- 仅支持 Cloudflare
-  - domain: "*.app.example.com"
+  # 或者禁用备用 CA，仅使用 Let's Encrypt（不需要邮箱）
+  # - domain: "*.example.com"
+  #   dns_provider: "cloudflare"
+  #   dns_credentials: '{"api_token": "your_cloudflare_api_token_here"}'
+  #   enable_backup_ca: false  # 禁用备用 CA
+
+  # ==================================================
+  # 场景 2: 明确指定主 CA 和备用 CA
+  # ==================================================
+  - domain: "*.test.com"
+    dns_provider: "cloudflare"
+    dns_credentials: '{"api_token": "your_cloudflare_api_token"}'
+    ca_provider: "letsencrypt"    # 主 CA: Let's Encrypt
+    backup_ca: "zerossl"          # 备用 CA: ZeroSSL
+    email: "admin@test.com"       # ZeroSSL 需要邮箱
+    enable_backup_ca: true        # 显式启用备用 CA（默认 true）
+
+  # ==================================================
+  # 场景 3: 仅使用 ZeroSSL（无备用）
+  # ==================================================
+  - domain: "*.demo.com"
+    dns_provider: "cloudflare"
+    dns_credentials: '{"api_token": "your_cloudflare_api_token"}'
+    ca_provider: "zerossl"        # 主 CA: ZeroSSL
+    email: "admin@demo.com"       # ZeroSSL 必须配置邮箱
+    enable_backup_ca: false       # 禁用备用 CA
+
+  # ==================================================
+  # 场景 4: 使用其他 CA (Google)
+  # 注意: Buypass 不支持通配符证书，仅适用于单域名
+  # ==================================================
+  - domain: "*.other.com"
+    dns_provider: "cloudflare"
+    dns_credentials: '{"api_token": "your_cloudflare_api_token"}'
+    ca_provider: "google"          # 主 CA: Google Trust Services
+    backup_ca: "letsencrypt"      # 备用 CA: Let's Encrypt
+    enable_backup_ca: true
+
+  # ==================================================
+  # 场景 5: 旧配置格式（向后兼容）
+  # 自动使用 Let's Encrypt + ZeroSSL 备用
+  # ==================================================
+  - domain: "*.legacy.com"
     cloudflare_key: "your_cloudflare_api_token_here"
 
 # 虚拟主机配置
@@ -113,23 +159,51 @@ vhosts:
 #    - 在 config/wildcard.go 的 getDNSProvider 函数中添加对应的处理逻辑
 #    - 在 go.mod 中添加对应的 libdns 依赖
 #
-# 8. 配置格式说明：
+# 8. CA (证书签发商) 配置说明：
+#    支持的 CA Provider：
+#    ✅ letsencrypt: Let's Encrypt (默认，推荐，支持通配符)
+#    ✅ zerossl: ZeroSSL (需要邮箱，支持通配符)
+#    ✅ google: Google Trust Services (支持通配符)
+#    ⚠️ buypass: Buypass (180天有效期，**不支持通配符**，仅适用于单域名)
+#
+#    主备 CA 机制：
+#    1. certmagic 会先尝试主 CA 申请证书
+#    2. 如果主 CA 失败（如速率限制），自动使用备用 CA
+#    3. 证书续期时也会使用相同的主备机制
+#
+#    推荐配置：
+#    - 生产环境: Let's Encrypt 主 + ZeroSSL 备用 (默认)
+#    - 高可用: 可多配置几个通配符域名，分散到不同 CA
+#    - 注意: 通配符证书请使用 letsencrypt/zerossl/google，不要使用 buypass
+#
+#    Email 配置：
+#    - Let's Encrypt: 可选（用于证书过期提醒）
+#    - ZeroSSL: 必须（用于账户注册）
+#    - Buypass: 可选
+#    - Google: 可选
+#
+# 9. 配置格式说明：
 #    新配置格式（推荐）：
 #    wildcard_certs:
 #      - domain: "*.example.com"
 #        dns_provider: cloudflare
 #        dns_credentials: '{"api_token": "your_token"}'
+#        ca_provider: letsencrypt    # 主 CA（可选，默认 letsencrypt）
+#        backup_ca: zerossl          # 备用 CA（可选，默认 zerossl）
+#        email: admin@example.com    # 邮箱（ZeroSSL 必需）
 #
 #    旧配置格式（向后兼容）：
 #    wildcard_certs:
 #      - domain: "*.example.com"
 #        cloudflare_key: "your_token"
+#        # 自动使用 Let's Encrypt 主 + ZeroSSL 备用
 #
 #    两种格式可以混合使用，但建议统一使用新格式
 #
-# 9. 优势：
+# 10. 优势：
 #    - 一次申请，多个子域名共用
 #    - 自动续期，无需手动管理
 #    - 减少证书申请次数，避免达到 ACME 速率限制
 #    - 简化配置管理
 #    - 支持多种 DNS Provider（未来）
+#    - 支持多种 CA，主备机制提高可用性
