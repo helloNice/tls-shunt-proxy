@@ -17,7 +17,8 @@ import (
 
 // Start 启动 web 管理界面（在新 goroutine 中），configPath 为配置文件路径
 // 绑定到 127.0.0.1:8080，启用 Basic Auth（凭据来自环境变量 WEBUI_USER/WEBUI_PASS）
-func Start(configPath string) {
+// reloadMgr 为热重载管理器，用于零停机重载
+func Start(configPath string, reloadMgr interface{}) {
 	tmpl := template.Must(template.ParseFiles("webui/templates/index.html"))
 
 	mux := http.NewServeMux()
@@ -92,6 +93,91 @@ func Start(configPath string) {
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]string{"config": string(yamlData)})
+	})
+
+	// API: 获取支持的架构列表
+	mux.HandleFunc("/api/architectures", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "仅支持 GET", http.StatusMethodNotAllowed)
+			return
+		}
+		architectures := []map[string]string{
+			{"value": "amd64", "label": "AMD64 (Intel/AMD 64位)", "description": "适用于大多数现代服务器"},
+			{"value": "arm64", "label": "ARM64 (64位 ARM)", "description": "适用于树莓派 4+、Apple Silicon 等"},
+			{"value": "386", "label": "386 (Intel 32位)", "description": "适用于老旧 32位系统"},
+			{"value": "arm", "label": "ARM (32位)", "description": "适用于树莓派 1-3 等"},
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(architectures)
+	})
+
+	// API: 获取连接统计信息
+	mux.HandleFunc("/api/stats", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "仅支持 GET", http.StatusMethodNotAllowed)
+			return
+		}
+
+		stats := map[string]interface{}{
+			"connections": 0,
+			"shutting_down": false,
+		}
+
+		if reloadMgr != nil {
+			if hr, ok := reloadMgr.(interface {
+				GetConnectionCount() int
+				IsShuttingDown() bool
+			}); ok {
+				stats["connections"] = hr.GetConnectionCount()
+				stats["shutting_down"] = hr.IsShuttingDown()
+			}
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(stats)
+	})
+
+	// API: 重新加载配置（零停机）
+	mux.HandleFunc("/api/reload", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "仅支持 POST", http.StatusMethodNotAllowed)
+			return
+		}
+
+		// 验证配置文件语法
+		if err := validateConfigFile(configPath); err != nil {
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"success": false,
+				"error":   err.Error(),
+			})
+			return
+		}
+
+		// 零停机重载：向主进程发送 SIGHUP 信号
+		if reloadMgr != nil {
+			// 使用类型断言检查是否为 HotReloadManager
+			if hr, ok := reloadMgr.(interface{ ZeroDowntimeReload(string) error }); ok {
+				go func() {
+					if err := hr.ZeroDowntimeReload(configPath); err != nil {
+						log.Printf("零停机重载失败: %v", err)
+					}
+				}()
+			} else {
+				// 回退到重启方式
+				log.Println("回退到进程重启方式")
+				go reloadByRestart()
+			}
+		} else {
+			// 没有热重载管理器，使用重启方式
+			go reloadByRestart()
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"success": true,
+			"message": "零停机配置重载已启动，现有连接不会中断...",
+		})
 	})
 
 	// API: 获取支持的架构列表
@@ -278,4 +364,37 @@ func generateConfigFromWizard(formData *raw.WizardFormData) *raw.ConfigTemplate 
 	config.VHosts = append(config.VHosts, vhost)
 
 	return config
+}
+
+// validateConfigFile 验证配置文件
+func validateConfigFile(configPath string) error {
+	data, err := ioutil.ReadFile(configPath)
+	if err != nil {
+		return fmt.Errorf("读取配置文件失败: %w", err)
+	}
+
+	var tmp interface{}
+	if err := yaml.Unmarshal(data, &tmp); err != nil {
+		return fmt.Errorf("配置文件语法错误: %w", err)
+	}
+
+	return nil
+}
+
+// reloadByRestart 通过重启方式重载配置
+func reloadByRestart() {
+	execPath, err := os.Executable()
+	if err != nil {
+		log.Printf("获取可执行文件路径失败: %v", err)
+		return
+	}
+	cmd := exec.Command(execPath, os.Args[1:]...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if err := cmd.Start(); err != nil {
+		log.Printf("启动新进程失败: %v", err)
+		return
+	}
+	_ = cmd.Process.Release()
+	os.Exit(0)
 }
