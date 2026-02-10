@@ -236,8 +236,31 @@ func handleWithServerName(conn net.Conn, serverName string) {
 	}
 
 	if vh.TlsConfig != nil {
-		conn = tlsOffloading(conn, vh.TlsConfig)
-		sniffConn := sniffer.NewPeekPreDataConn(conn)
+		tlsConn := tlsOffloading(conn, vh.TlsConfig)
+		
+		// 进行 TLS 握手以获取 ALPN 协商结果
+		if err := tlsConn.Handshake(); err != nil {
+			log.Printf("TLS handshake failed for %s: %v\n", serverName, err)
+			return
+		}
+		
+		// 检查 ALPN 协商结果
+		negotiatedProtocol := tlsConn.ConnectionState().NegotiatedProtocol
+		if negotiatedProtocol == "h2" {
+			// HTTP/2 通过 ALPN 协商成功
+			log.Printf("HTTP/2 negotiated for %s via ALPN\n", serverName)
+			if vh.Http2 != handler.NoopHandler {
+				// 如果配置了 Http2 处理器，使用它
+				vh.Http2.Handle(tlsConn)
+				return
+			}
+			// 如果没有配置 Http2 处理器，继续使用嗅探器
+			// 这样可以让 HTTP 流量被正确路由到 Http 处理器
+			log.Printf("No Http2 handler configured for %s, using sniffer to detect traffic type\n", serverName)
+		}
+		
+		// HTTP/1.1 或 HTTP/2（无 Http2 处理器时），继续使用嗅探
+		sniffConn := sniffer.NewPeekPreDataConn(tlsConn)
 		conn = sniffConn
 
 		switch sniffConn.Type {
@@ -254,8 +277,10 @@ func handleWithServerName(conn net.Conn, serverName string) {
 				return
 			}
 		}
+		vh.Default.Handle(tlsConn)
+	} else {
+		vh.Default.Handle(conn)
 	}
-	vh.Default.Handle(conn)
 }
 
 func handleHttp(conn *sniffer.SniffConn, vh config.VHost) bool {

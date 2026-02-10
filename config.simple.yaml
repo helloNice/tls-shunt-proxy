@@ -37,7 +37,7 @@ vhosts:
     key: /etc/ssl/vmess.example.com.key
 
     # alpn: ALPN, 多个 next protocol 之间用 "," 分隔
-    alpn: h2,http/1.1
+    alpn: http/1.1,h2
 
     # protocols: 指定 tls 协议版本，格式为 min,max , 可用值 tls12(默认最小), tls13(默认最大)
     # 如果最小值和最大值相同，那么你只需要写一次

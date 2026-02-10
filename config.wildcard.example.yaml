@@ -73,7 +73,7 @@ vhosts:
     tlsoffloading: true
     managedcert: true  # 即使为 true，也会使用通配符证书
     keytype: p256
-    alpn: h2,http/1.1
+    alpn: http/1.1,h2
     protocols: tls12,tls13
     http:
       handler: proxyPass
@@ -87,7 +87,7 @@ vhosts:
     tlsoffloading: true
     managedcert: true
     keytype: p256
-    alpn: h2,http/1.1
+    alpn: http/1.1,h2
     protocols: tls12,tls13
     default:
       handler: proxyPass
@@ -98,7 +98,7 @@ vhosts:
     tlsoffloading: true
     managedcert: true
     keytype: p256
-    alpn: h2,http/1.1
+    alpn: http/1.1,h2
     protocols: tls12,tls13
     default:
       handler: proxyPass
@@ -109,7 +109,7 @@ vhosts:
     tlsoffloading: true
     managedcert: true
     keytype: p256
-    alpn: h2,http/1.1
+    alpn: http/1.1,h2
     protocols: tls12,tls13
     default:
       handler: proxyPass

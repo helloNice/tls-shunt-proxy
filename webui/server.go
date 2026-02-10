@@ -17,6 +17,7 @@ import (
 	"sync"
 
 	"github.com/liberal-boy/tls-shunt-proxy/config/raw"
+	"golang.org/x/net/http2"
 	"gopkg.in/yaml.v2"
 )
 
@@ -290,7 +291,18 @@ func Start(configPath string, reloadMgr interface{}) {
 	bind := "127.0.0.1:8080"
 	log.Println("web 管理界面启动，访问 http://" + bind + " （默认账户 admin/admin，如已在环境中设置 WEBUI_USER/WEBUI_PASS 则使用设置的）")
 	go func() {
-		if err := http.ListenAndServe(bind, handler); err != nil {
+		// 启用 HTTP/2 支持
+		server := &http.Server{
+			Addr:    bind,
+			Handler: handler,
+		}
+		// 尝试启用 HTTP/2
+		if err := http2.ConfigureServer(server, nil); err != nil {
+			log.Println("启用 HTTP/2 失败，将使用 HTTP/1.1:", err)
+		} else {
+			log.Println("HTTP/2 已启用")
+		}
+		if err := server.ListenAndServe(); err != nil {
 			log.Println("webui 启动失败:", err)
 		}
 	}()
@@ -336,7 +348,7 @@ func generateConfigFromWizard(formData *raw.WizardFormData) *raw.ConfigTemplate 
 		TlsOffloading: true,
 		ManagedCert:   true,
 		KeyType:       "p256",
-		Alpn:          "h2,http/1.1",
+		Alpn:          "http/1.1,h2",
 		Protocols:     "tls12,tls13",
 		Http: raw.RawHttpHandler{
 			Paths: []raw.RawPathHandler{},

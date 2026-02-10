@@ -54,7 +54,7 @@ vhosts:
     keytype: p256
 
     # alpn: ALPN 协议列表
-    alpn: h2,http/1.1
+    alpn: http/1.1,h2
 
     # protocols: TLS 协议版本
     protocols: tls12,tls13
