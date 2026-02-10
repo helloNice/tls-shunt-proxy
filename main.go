@@ -30,8 +30,9 @@ var (
 func main() {
 	fmt.Println("tls-shunt-proxy version", version)
 
-	configPath = *flag.String("config", "./config.yaml", "Path to config file")
+	configFlag := flag.String("config", "./config.yaml", "Path to config file")
 	flag.Parse()
+	configPath = *configFlag
 
 	// 初始化热重载管理器
 	reloadMgr = config.NewHotReloadManager()
