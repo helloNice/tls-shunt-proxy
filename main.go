@@ -77,10 +77,31 @@ func startInheritedListener() error {
 
 	log.Printf("从继承的文件描述符 %d 创建监听器", fd)
 
+	// 从文件描述符创建文件对象
+	// 使用 "tcp" 作为名称，表示这是一个 TCP socket
+	file := os.NewFile(uintptr(fd), "tcp")
+	if file == nil {
+		return fmt.Errorf("无法从文件描述符 %d 创建文件对象", fd)
+	}
+
+	// 先尝试创建 FileConn 来验证文件描述符是否有效
+	conn, err := net.FileConn(file)
+	if err != nil {
+		file.Close()
+		return fmt.Errorf("从文件描述符创建连接失败: %w", err)
+	}
+	conn.Close()
+
+	// 重新创建文件对象（因为 FileConn 可能会改变文件描述符状态）
+	file = os.NewFile(uintptr(fd), "tcp")
+	if file == nil {
+		return fmt.Errorf("无法重新创建文件对象")
+	}
+
 	// 从文件描述符创建监听器
-	file := os.NewFile(uintptr(fd), "listener")
 	listener, err := net.FileListener(file)
 	if err != nil {
+		file.Close()
 		return fmt.Errorf("从文件描述符创建监听器失败: %w", err)
 	}
 

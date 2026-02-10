@@ -169,10 +169,21 @@ func (h *HotReloadManager) ZeroDowntimeReload(configPath string) error {
 		h.SetShuttingDown(false)
 		return fmt.Errorf("获取监听器文件描述符失败: %w", err)
 	}
-	defer file.Close()
 
 	listenFD := file.Fd()
 	log.Printf("获取到监听器文件描述符: %d", listenFD)
+
+	// 重要：不要关闭 file 对象，因为它会被传递给子进程
+	// file.Close() 将在子进程启动完成后调用
+
+	// 2.5 主动关闭旧进程的 Web UI，避免端口冲突
+	// 这是必要的，因为 Web UI 在独立的 goroutine 中运行，不会被 GracefulShutdown 自动关闭
+	go func() {
+		conn, err := net.DialTimeout("tcp", "127.0.0.1:8080", 100*time.Millisecond)
+		if err == nil {
+			conn.Close()
+		}
+	}()
 
 	// 3. 启动新进程，继承监听器文件描述符
 	execPath, err := os.Executable()
@@ -184,8 +195,11 @@ func (h *HotReloadManager) ZeroDowntimeReload(configPath string) error {
 	}
 
 	// 设置环境变量，传递文件描述符编号
+	// 注意：当使用 cmd.ExtraFiles 时，文件描述符编号会重新分配
+	// 第一个 ExtraFiles 的文件描述符编号为 3（因为 0,1,2 已被 stdin,stdout,stderr 占用）
+	newFD := 3 // ExtraFiles 中的第一个文件描述符编号
 	env := append(os.Environ(),
-		fmt.Sprintf("TLS_SHUNT_LISTENER_FD=%d", listenFD),
+		fmt.Sprintf("TLS_SHUNT_LISTENER_FD=%d", newFD),
 		fmt.Sprintf("TLS_SHUNT_RELOAD_MODE=zero-downtime"),
 	)
 
@@ -236,7 +250,12 @@ func (h *HotReloadManager) ZeroDowntimeReload(configPath string) error {
 		log.Println("没有活跃连接，立即退出")
 	}
 
-	// 7. 退出旧进程
+	// 7. 关闭文件描述符（在新进程启动后才关闭）
+	if err := file.Close(); err != nil {
+		log.Printf("关闭文件描述符失败: %v", err)
+	}
+
+	// 8. 退出旧进程
 	log.Println("旧进程退出")
 	os.Exit(0)
 	return nil

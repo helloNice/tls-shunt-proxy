@@ -15,6 +15,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/liberal-boy/tls-shunt-proxy/config/raw"
 	"golang.org/x/net/http2"
@@ -302,8 +303,30 @@ func Start(configPath string, reloadMgr interface{}) {
 		} else {
 			log.Println("HTTP/2 已启用")
 		}
-		if err := server.ListenAndServe(); err != nil {
-			log.Println("webui 启动失败:", err)
+		
+		// 使用指数退避重试逻辑启动 Web UI
+		// 增加重试次数到 10 次，确保有足够的时间让旧进程的 Web UI 释放端口
+		maxRetries := 10
+		initialDelay := 100 * time.Millisecond
+		
+		for attempt := 0; attempt < maxRetries; attempt++ {
+			err := server.ListenAndServe()
+			
+			// 如果是首次启动失败且是地址被占用错误，则重试
+			if attempt < maxRetries-1 && err != nil {
+				if strings.Contains(err.Error(), "address already in use") {
+					delay := time.Duration(initialDelay.Nanoseconds() * (1 << uint(attempt)))
+					log.Printf("webui 启动失败（地址被占用），%v 后重试 (尝试 %d/%d): %v", delay, attempt+1, maxRetries, err)
+					time.Sleep(delay)
+					continue
+				}
+			}
+			
+			// 如果重试次数用完或非地址占用错误，则记录错误并退出
+			if err != nil {
+				log.Printf("webui 启动失败: %v", err)
+			}
+			break
 		}
 	}()
 }
