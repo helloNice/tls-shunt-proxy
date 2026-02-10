@@ -12,6 +12,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"os/exec"
 	"os/signal"
 	"strconv"
 	"strings"
@@ -28,11 +29,39 @@ var (
 )
 
 func main() {
-	fmt.Println("tls-shunt-proxy version", version)
-
 	configFlag := flag.String("config", "./config.yaml", "Path to config file")
+	signalFlag := flag.String("s", "", "Send signal to master process: reload, stop, quit")
+	testConfigFlag := flag.Bool("t", false, "Test configuration and exit")
+	helpFlag := flag.Bool("h", false, "Show this help message")
 	flag.Parse()
 	configPath = *configFlag
+
+	// 处理 -h 参数：显示帮助
+	if *helpFlag {
+		printHelp()
+		os.Exit(0)
+	}
+
+	// 处理 -t 参数：测试配置
+	if *testConfigFlag {
+		if err := testConfig(configPath); err != nil {
+			fmt.Printf("配置测试失败: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Println("配置测试成功")
+		os.Exit(0)
+	}
+
+	// 处理 -s 参数：发送信号
+	if *signalFlag != "" {
+		if err := sendSignal(*signalFlag); err != nil {
+			fmt.Printf("发送信号失败: %v\n", err)
+			os.Exit(1)
+		}
+		os.Exit(0)
+	}
+
+	fmt.Println("tls-shunt-proxy version", version)
 
 	// 初始化热重载管理器
 	reloadMgr = config.NewHotReloadManager()
@@ -339,4 +368,191 @@ func handleTrojan(conn *sniffer.SniffConn, vh config.VHost) bool {
 
 func tlsOffloading(conn net.Conn, tlsConfig *tls.Config) *tls.Conn {
 	return tls.Server(conn, tlsConfig)
+}
+
+// testConfig 测试配置文件是否正确
+func testConfig(configPath string) error {
+	fmt.Printf("测试配置文件: %s\n", configPath)
+	
+	// 读取配置
+	conf, err := config.ReadConfig(configPath)
+	if err != nil {
+		return fmt.Errorf("读取配置失败: %w", err)
+	}
+	
+	fmt.Println("✓ 配置文件语法正确")
+	fmt.Printf("  - 监听地址: %s\n", conf.Listen)
+	fmt.Printf("  - 虚拟主机数量: %d\n", len(conf.VHosts))
+	
+	// 验证虚拟主机配置
+	i := 1
+	for name, vhost := range conf.VHosts {
+		fmt.Printf("  - 虚拟主机 %d: %s\n", i, name)
+		if vhost.TlsConfig != nil {
+			fmt.Printf("    - TLS 启用: 是\n")
+		} else {
+			fmt.Printf("    - TLS 启用: 否\n")
+		}
+		i++
+	}
+	
+	return nil
+}
+
+// sendSignal 向主进程发送信号
+func sendSignal(signalType string) error {
+	// 查找主进程 PID
+	pid, err := findMasterPID()
+	if err != nil {
+		return fmt.Errorf("查找主进程失败: %w", err)
+	}
+	
+	fmt.Printf("找到主进程 PID: %d\n", pid)
+	
+	// 根据信号类型发送相应的信号
+	switch signalType {
+	case "reload":
+		// 发送 SIGHUP 信号触发配置重载
+		fmt.Println("发送重载信号...")
+		process, err := os.FindProcess(pid)
+		if err != nil {
+			return fmt.Errorf("查找进程失败: %w", err)
+		}
+		if err := process.Signal(syscall.SIGHUP); err != nil {
+			return fmt.Errorf("发送信号失败: %w", err)
+		}
+		fmt.Println("配置重载信号已发送")
+		return nil
+		
+	case "stop":
+		// 发送 SIGTERM 信号优雅停止
+		fmt.Println("发送停止信号...")
+		process, err := os.FindProcess(pid)
+		if err != nil {
+			return fmt.Errorf("查找进程失败: %w", err)
+		}
+		if err := process.Signal(syscall.SIGTERM); err != nil {
+			return fmt.Errorf("发送信号失败: %w", err)
+		}
+		fmt.Println("停止信号已发送")
+		return nil
+		
+	case "quit":
+		// 发送 SIGQUIT 信号立即停止
+		fmt.Println("发送退出信号...")
+		process, err := os.FindProcess(pid)
+		if err != nil {
+			return fmt.Errorf("查找进程失败: %w", err)
+		}
+		if err := process.Signal(syscall.SIGQUIT); err != nil {
+			return fmt.Errorf("发送信号失败: %w", err)
+		}
+		fmt.Println("退出信号已发送")
+		return nil
+		
+	default:
+		return fmt.Errorf("未知的信号类型: %s (支持: reload, stop, quit)", signalType)
+	}
+}
+
+// findMasterPID 查找主进程 PID
+func findMasterPID() (int, error) {
+	// 获取当前进程 PID，避免向自己发送信号
+	currentPID := os.Getpid()
+
+	// 使用 pgrep 查找进程，使用更精确的匹配
+	cmd := exec.Command("pgrep", "-x", "tls-shunt-proxy") // -x 参数精确匹配进程名
+	output, err := cmd.Output()
+	if err != nil {
+		// pgrep 不可用，尝试使用 ps
+		cmd = exec.Command("ps", "-eo", "pid,comm") // 只获取 PID 和命令名
+		output, err = cmd.Output()
+		if err != nil {
+			return 0, fmt.Errorf("无法查找进程: %w", err)
+		}
+
+		// 解析 ps 输出
+		lines := strings.Split(string(output), "\n")
+		for _, line := range lines {
+			line = strings.TrimSpace(line)
+			if line == "" {
+				continue
+			}
+			fields := strings.Fields(line)
+			if len(fields) >= 2 {
+				// 检查命令名是否匹配
+				comm := fields[1]
+				// 提取命令名部分（去除路径）
+				if slashIndex := strings.LastIndex(comm, "/"); slashIndex != -1 {
+					comm = comm[slashIndex+1:]
+				}
+				
+				if comm == "tls-shunt-proxy" || comm == "tls-shunt-proxy.exe" {
+					pid, err := strconv.Atoi(fields[0])
+					if err == nil && pid != currentPID { // 确保不是当前进程
+						return pid, nil
+					}
+				}
+			}
+		}
+
+		return 0, fmt.Errorf("未找到 tls-shunt-proxy 进程")
+	}
+
+	// 解析 pgrep 输出
+	pids := strings.Split(strings.TrimSpace(string(output)), "\n")
+	for _, pidStr := range pids {
+		pidStr = strings.TrimSpace(pidStr)
+		if pidStr == "" {
+			continue
+		}
+		
+		pid, err := strconv.Atoi(pidStr)
+		if err != nil {
+			continue
+		}
+		
+		// 确保不是当前进程
+		if pid != currentPID {
+			return pid, nil
+		}
+	}
+
+	return 0, fmt.Errorf("未找到其他 tls-shunt-proxy 进程")
+}
+
+// printHelp 打印帮助信息
+func printHelp() {
+	fmt.Printf("tls-shunt-proxy version %s\n\n", version)
+	fmt.Println("用法:")
+	fmt.Println("  tls-shunt-proxy [选项]")
+	fmt.Println()
+	fmt.Println("选项:")
+	fmt.Println("  -config string")
+	fmt.Println("        配置文件路径 (默认 \"./config.yaml\")")
+	fmt.Println("  -s string")
+	fmt.Println("        向主进程发送信号: reload, stop, quit")
+	fmt.Println("  -t")
+	fmt.Println("        测试配置文件并退出")
+	fmt.Println("  -h")
+	fmt.Println("        显示此帮助信息")
+	fmt.Println()
+	fmt.Println("示例:")
+	fmt.Println("  # 启动服务")
+	fmt.Println("  ./tls-shunt-proxy")
+	fmt.Println()
+	fmt.Println("  # 指定配置文件启动")
+	fmt.Println("  ./tls-shunt-proxy -config /path/to/config.yaml")
+	fmt.Println()
+	fmt.Println("  # 测试配置文件")
+	fmt.Println("  ./tls-shunt-proxy -t")
+	fmt.Println()
+	fmt.Println("  # 重载配置（类似 nginx -s reload）")
+	fmt.Println("  ./tls-shunt-proxy -s reload")
+	fmt.Println()
+	fmt.Println("  # 优雅停止服务")
+	fmt.Println("  ./tls-shunt-proxy -s stop")
+	fmt.Println()
+	fmt.Println("  # 立即停止服务")
+	fmt.Println("  ./tls-shunt-proxy -s quit")
 }
