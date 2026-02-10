@@ -95,7 +95,7 @@
         /* 主内容区域 */
         .main-container {
             flex: 1;
-            padding: 20px;
+            padding: 16px;
             display: flex;
             justify-content: center;
             align-items: flex-start;
@@ -105,9 +105,9 @@
             width: 100%;
             max-width: 1400px;
             background: white;
-            border-radius: 16px;
+            border-radius: 12px;
             box-shadow: var(--card-shadow);
-            padding: 28px;
+            padding: 24px;
             animation: fadeInUp 0.6s ease;
         }
 
@@ -126,18 +126,18 @@
         .stepper {
             display: flex;
             justify-content: space-between;
-            margin-bottom: 32px;
+            margin-bottom: 24px;
             position: relative;
-            padding: 0 16px;
+            padding: 0 12px;
         }
 
         .stepper::before {
             content: '';
             position: absolute;
-            top: 24px;
-            left: 48px;
-            right: 48px;
-            height: 3px;
+            top: 22px;
+            left: 44px;
+            right: 44px;
+            height: 2px;
             background: #e0e0e0;
             z-index: 1;
         }
@@ -152,26 +152,26 @@
         }
 
         .stepper-circle {
-            width: 50px;
-            height: 50px;
+            width: 44px;
+            height: 44px;
             border-radius: 50%;
             background: #e0e0e0;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 18px;
+            font-size: 16px;
             font-weight: 700;
             color: #999;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
             transition: all var(--transition-speed);
-            border: 3px solid white;
+            border: 2px solid white;
         }
 
         .stepper-item.active .stepper-circle {
             background: var(--primary-gradient);
             color: white;
             transform: scale(1.05);
-            box-shadow: 0 4px 20px rgba(102, 126, 234, 0.4);
+            box-shadow: 0 4px 16px rgba(102, 126, 234, 0.4);
         }
 
         .stepper-item.completed .stepper-circle {
@@ -180,7 +180,7 @@
         }
 
         .stepper-label {
-            font-size: 13px;
+            font-size: 12px;
             font-weight: 600;
             color: #999;
             text-align: center;
@@ -218,31 +218,31 @@
 
         .step-header {
             text-align: center;
-            margin-bottom: 24px;
+            margin-bottom: 16px;
         }
 
         .step-header h2 {
-            font-size: 26px;
+            font-size: 24px;
             font-weight: 700;
             color: #333;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
         }
 
         .step-header p {
-            font-size: 14px;
+            font-size: 13px;
             color: #666;
         }
 
         /* 表单样式 */
         .form-section {
-            margin-bottom: 24px;
+            margin-bottom: 16px;
         }
 
         .form-section-title {
-            font-size: 16px;
+            font-size: 15px;
             font-weight: 600;
             color: #333;
-            margin-bottom: 16px;
+            margin-bottom: 12px;
             display: flex;
             align-items: center;
             gap: 6px;
@@ -255,15 +255,15 @@
         .form-label {
             font-weight: 600;
             color: #333;
-            font-size: 14px;
-            margin-bottom: 8px;
+            font-size: 13px;
+            margin-bottom: 6px;
         }
 
         .form-control {
             border: 2px solid #e0e0e0;
-            border-radius: 12px;
-            padding: 14px 16px;
-            font-size: 15px;
+            border-radius: 10px;
+            padding: 12px 14px;
+            font-size: 14px;
             transition: all var(--transition-speed);
         }
 
@@ -274,27 +274,27 @@
 
         .form-text {
             color: #666;
-            font-size: 13px;
-            margin-top: 6px;
+            font-size: 12px;
+            margin-top: 4px;
         }
 
         /* API 配置卡片 */
         .api-config-card {
             background: #f8f9fa;
-            border-radius: 12px;
-            padding: 24px;
-            margin-bottom: 20px;
+            border-radius: 10px;
+            padding: 18px;
+            margin-bottom: 16px;
         }
 
         .connection-status {
             display: flex;
             align-items: center;
             gap: 10px;
-            padding: 12px 16px;
-            border-radius: 10px;
-            margin-top: 16px;
+            padding: 10px 14px;
+            border-radius: 8px;
+            margin-top: 12px;
             font-weight: 600;
-            font-size: 13px;
+            font-size: 12px;
         }
 
         .connection-status.testing {
@@ -316,46 +316,46 @@
         .domain-config-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 20px;
+            gap: 16px;
         }
 
         .domain-preview {
             background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
             border: 2px dashed #667eea;
-            border-radius: 10px;
-            padding: 20px;
+            border-radius: 8px;
+            padding: 16px;
             text-align: center;
         }
 
         .domain-preview h4 {
             color: #667eea;
-            margin-bottom: 6px;
-            font-size: 16px;
+            margin-bottom: 4px;
+            font-size: 15px;
         }
 
         .domain-preview .preview-url {
-            font-size: 16px;
+            font-size: 15px;
             font-weight: 700;
             color: #333;
             background: white;
-            padding: 10px 16px;
-            border-radius: 8px;
+            padding: 8px 14px;
+            border-radius: 6px;
             display: inline-block;
-            margin-top: 10px;
+            margin-top: 8px;
         }
 
         /* 架构选择卡片 */
         .architecture-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
-            gap: 20px;
-            margin-bottom: 24px;
+            gap: 16px;
+            margin-bottom: 18px;
         }
 
         .architecture-card {
-            border: 3px solid #e0e0e0;
-            border-radius: 16px;
-            padding: 24px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            padding: 18px;
             cursor: pointer;
             transition: all var(--transition-speed);
             background: white;
@@ -369,7 +369,7 @@
             top: 0;
             left: 0;
             right: 0;
-            height: 5px;
+            height: 4px;
             background: var(--primary-gradient);
             opacity: 0;
             transition: opacity var(--transition-speed);
@@ -377,8 +377,8 @@
 
         .architecture-card:hover {
             border-color: #667eea;
-            transform: translateY(-3px);
-            box-shadow: 0 8px 30px rgba(102, 126, 234, 0.2);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 24px rgba(102, 126, 234, 0.2);
         }
 
         .architecture-card.selected {
@@ -391,38 +391,38 @@
         }
 
         .architecture-card .icon {
-            font-size: 52px;
-            margin-bottom: 16px;
+            font-size: 48px;
+            margin-bottom: 12px;
             display: block;
         }
 
         .architecture-card h3 {
-            font-size: 20px;
+            font-size: 18px;
             font-weight: 700;
             color: #333;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
         }
 
         .architecture-card p {
             color: #666;
-            font-size: 13px;
-            line-height: 1.5;
-            margin-bottom: 12px;
+            font-size: 12px;
+            line-height: 1.4;
+            margin-bottom: 10px;
         }
 
         .architecture-card .features {
             list-style: none;
             padding: 0;
-            margin-top: 16px;
+            margin-top: 12px;
         }
 
         .architecture-card .features li {
             color: #666;
-            font-size: 12px;
-            padding: 5px 0;
+            font-size: 11px;
+            padding: 4px 0;
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 5px;
         }
 
         .architecture-card .features li i {
@@ -431,17 +431,17 @@
 
         .architecture-diagram {
             background: #f8f9fa;
-            border-radius: 10px;
-            padding: 16px;
-            margin-top: 16px;
+            border-radius: 8px;
+            padding: 12px;
+            margin-top: 12px;
             text-align: center;
         }
 
         .architecture-diagram h5 {
             color: #666;
-            margin-bottom: 12px;
+            margin-bottom: 10px;
             font-weight: 600;
-            font-size: 13px;
+            font-size: 12px;
         }
 
         /* 转发规则表格 */
@@ -449,16 +449,16 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 16px;
-            padding: 16px;
+            margin-bottom: 12px;
+            padding: 12px;
             background: #f8f9fa;
-            border-radius: 10px;
+            border-radius: 8px;
         }
 
         .rules-toolbar h4 {
             margin: 0;
             color: #333;
-            font-size: 16px;
+            font-size: 15px;
             font-weight: 700;
         }
 
@@ -467,7 +467,7 @@
             border-spacing: 0;
             width: 100%;
             background: white;
-            border-radius: 10px;
+            border-radius: 8px;
             overflow: hidden;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
         }
@@ -478,14 +478,14 @@
         }
 
         .rules-table th {
-            padding: 12px;
+            padding: 10px;
             font-weight: 600;
-            font-size: 13px;
+            font-size: 12px;
             text-align: left;
         }
 
         .rules-table td {
-            padding: 12px;
+            padding: 10px 8px;
             border-bottom: 1px solid #e0e0e0;
             vertical-align: middle;
         }
@@ -496,18 +496,18 @@
 
         .protocol-selector {
             display: flex;
-            gap: 6px;
+            gap: 5px;
         }
 
         .protocol-option {
             display: flex;
             align-items: center;
-            gap: 4px;
+            gap: 3px;
             cursor: pointer;
-            padding: 4px 10px;
-            border-radius: 5px;
+            padding: 3px 8px;
+            border-radius: 4px;
             transition: all var(--transition-speed);
-            font-size: 12px;
+            font-size: 11px;
         }
 
         .protocol-option:hover {
@@ -525,9 +525,9 @@
 
         .preview-badge {
             display: inline-block;
-            padding: 5px 10px;
-            border-radius: 5px;
-            font-size: 11px;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 10px;
             font-weight: 600;
             background: #e3f2fd;
             color: #1976d2;
@@ -537,9 +537,9 @@
             background: #ffebee;
             color: #c62828;
             border: none;
-            padding: 5px 10px;
-            border-radius: 5px;
-            font-size: 12px;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
             font-weight: 600;
             cursor: pointer;
             transition: all var(--transition-speed);
@@ -573,10 +573,10 @@
 
         .modal-content {
             background: white;
-            border-radius: 20px;
+            border-radius: 12px;
             width: 90%;
-            max-width: 800px;
-            max-height: 90vh;
+            max-width: 760px;
+            max-height: 85vh;
             overflow-y: auto;
             transform: scale(0.9);
             transition: transform var(--transition-speed);
@@ -587,7 +587,7 @@
         }
 
         .modal-header {
-            padding: 24px 32px;
+            padding: 18px 24px;
             border-bottom: 1px solid #e0e0e0;
             display: flex;
             justify-content: space-between;
@@ -596,7 +596,7 @@
 
         .modal-header h5 {
             margin: 0;
-            font-size: 20px;
+            font-size: 18px;
             font-weight: 700;
             color: #333;
         }
@@ -604,7 +604,7 @@
         .modal-close {
             background: none;
             border: none;
-            font-size: 24px;
+            font-size: 20px;
             cursor: pointer;
             color: #999;
             transition: color var(--transition-speed);
@@ -615,18 +615,18 @@
         }
 
         .modal-body {
-            padding: 32px;
+            padding: 24px;
         }
 
         .modal-textarea {
             width: 100%;
-            min-height: 300px;
-            padding: 16px;
+            min-height: 260px;
+            padding: 14px;
             border: 2px solid #e0e0e0;
-            border-radius: 12px;
+            border-radius: 8px;
             font-family: 'Courier New', monospace;
-            font-size: 13px;
-            line-height: 1.6;
+            font-size: 12px;
+            line-height: 1.5;
             resize: vertical;
             transition: all var(--transition-speed);
         }
@@ -638,18 +638,18 @@
         }
 
         .modal-footer {
-            padding: 24px 32px;
+            padding: 18px 24px;
             border-top: 1px solid #e0e0e0;
             display: flex;
             justify-content: flex-end;
-            gap: 12px;
+            gap: 10px;
         }
 
         .import-status {
-            margin-top: 16px;
-            padding: 12px 16px;
-            border-radius: 8px;
-            font-size: 13px;
+            margin-top: 12px;
+            padding: 10px 14px;
+            border-radius: 6px;
+            font-size: 12px;
             font-weight: 600;
             display: none;
         }
@@ -667,24 +667,24 @@
         /* 配置摘要卡片 */
         .summary-card {
             background: #f8f9fa;
-            border-radius: 16px;
-            padding: 24px;
-            margin-bottom: 24px;
+            border-radius: 12px;
+            padding: 18px;
+            margin-bottom: 18px;
         }
 
         .summary-card h4 {
             color: #333;
-            margin-bottom: 16px;
+            margin-bottom: 12px;
             font-weight: 700;
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
         }
 
         .summary-item {
             display: flex;
             justify-content: space-between;
-            padding: 12px 0;
+            padding: 8px 0;
             border-bottom: 1px solid #e0e0e0;
         }
 
@@ -706,33 +706,33 @@
         .wizard-footer {
             display: flex;
             justify-content: space-between;
-            margin-top: 40px;
-            padding-top: 32px;
+            margin-top: 30px;
+            padding-top: 24px;
             border-top: 2px solid #e0e0e0;
         }
 
         .btn {
-            padding: 14px 32px;
-            border-radius: 12px;
-            font-size: 16px;
+            padding: 12px 28px;
+            border-radius: 10px;
+            font-size: 15px;
             font-weight: 600;
             border: none;
             cursor: pointer;
             transition: all var(--transition-speed);
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
         }
 
         .btn-primary {
             background: var(--primary-gradient);
             color: white;
-            box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);
+            box-shadow: 0 4px 16px rgba(102, 126, 234, 0.3);
         }
 
         .btn-primary:hover {
             transform: translateY(-2px);
-            box-shadow: 0 6px 30px rgba(102, 126, 234, 0.4);
+            box-shadow: 0 6px 24px rgba(102, 126, 234, 0.4);
         }
 
         .btn-secondary {
@@ -747,12 +747,12 @@
         .btn-success {
             background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
             color: white;
-            box-shadow: 0 4px 20px rgba(76, 175, 80, 0.3);
+            box-shadow: 0 4px 16px rgba(76, 175, 80, 0.3);
         }
 
         .btn-success:hover {
             transform: translateY(-2px);
-            box-shadow: 0 6px 30px rgba(76, 175, 80, 0.4);
+            box-shadow: 0 6px 24px rgba(76, 175, 80, 0.4);
         }
 
         .btn:disabled {
@@ -764,23 +764,23 @@
         /* 协议说明区域 */
         .protocol-info {
             background: #e3f2fd;
-            border-left: 4px solid #2196f3;
-            padding: 16px 20px;
-            border-radius: 8px;
-            margin-top: 24px;
+            border-left: 3px solid #2196f3;
+            padding: 12px 16px;
+            border-radius: 6px;
+            margin-top: 18px;
         }
 
         .protocol-info h5 {
             color: #1976d2;
-            margin-bottom: 12px;
-            font-size: 16px;
+            margin-bottom: 8px;
+            font-size: 14px;
         }
 
         .protocol-info p {
             color: #0d47a1;
-            font-size: 14px;
+            font-size: 13px;
             margin: 0;
-            line-height: 1.6;
+            line-height: 1.5;
         }
 
         /* 响应式设计 */
@@ -883,10 +883,11 @@
 
         /* 提示信息 */
         .alert {
-            border-radius: 12px;
+            border-radius: 8px;
             border: none;
-            padding: 16px 20px;
+            padding: 12px 16px;
             font-weight: 500;
+            font-size: 13px;
         }
 
         .alert-info {
@@ -910,7 +911,7 @@
             display: inline-block;
             cursor: pointer;
             color: #667eea;
-            margin-left: 6px;
+            margin-left: 4px;
         }
 
         .help-tooltip:hover::after {
@@ -921,9 +922,9 @@
             transform: translateX(-50%);
             background: #333;
             color: white;
-            padding: 8px 12px;
+            padding: 6px 10px;
             border-radius: 6px;
-            font-size: 12px;
+            font-size: 11px;
             white-space: nowrap;
             z-index: 100;
         }
@@ -965,14 +966,10 @@
                 </div>
                 <div class="stepper-item" id="stepper3">
                     <div class="stepper-circle">3</div>
-                    <div class="stepper-label">架构选择</div>
+                    <div class="stepper-label">转发规则</div>
                 </div>
                 <div class="stepper-item" id="stepper4">
                     <div class="stepper-circle">4</div>
-                    <div class="stepper-label">转发规则</div>
-                </div>
-                <div class="stepper-item" id="stepper5">
-                    <div class="stepper-circle">5</div>
                     <div class="stepper-label">配置确认</div>
                 </div>
             </div>
@@ -1086,87 +1083,8 @@
                 </div>
             </div>
 
-            <!-- 步骤3: 架构选择 -->
+            <!-- 步骤3: 转发规则配置 -->
             <div class="step-content" id="step3">
-                <div class="step-header">
-                    <h2><i class="bi bi-diagram-3"></i> 架构选择</h2>
-                    <p>选择适合您需求的部署架构</p>
-                </div>
-
-                <div class="architecture-grid">
-                    <!-- 全球同服 -->
-                    <div class="architecture-card" id="archGlobal" onclick="selectArchitecture('global')">
-                        <span class="icon">🌍</span>
-                        <h3>全球同服</h3>
-                        <p>所有用户访问同一个服务器，适合集中式部署和统一管理</p>
-                        <ul class="features">
-                            <li><i class="bi bi-check-circle"></i> 配置简单，易于维护</li>
-                            <li><i class="bi bi-check-circle"></i> 数据集中，便于分析</li>
-                            <li><i class="bi bi-check-circle"></i> 成本较低</li>
-                            <li><i class="bi bi-check-circle"></i> 适合中小规模应用</li>
-                        </ul>
-                        <div class="architecture-diagram">
-                            <h5>架构示意图</h5>
-                            <div style="display: flex; justify-content: center; align-items: center; gap: 20px;">
-                                <div style="background: #e3f2fd; padding: 12px 20px; border-radius: 8px;">
-                                    <i class="bi bi-globe"></i> 全球用户
-                                </div>
-                                <i class="bi bi-arrow-right text-primary"></i>
-                                <div style="background: #e8f5e9; padding: 12px 20px; border-radius: 8px;">
-                                    <i class="bi bi-server"></i> 单一服务器
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- 分区分服 -->
-                    <div class="architecture-card" id="archRegion" onclick="selectArchitecture('region')">
-                        <span class="icon">🗺️</span>
-                        <h3>分区分服</h3>
-                        <p>根据用户地理位置分配不同服务器，提供更好的访问体验</p>
-                        <ul class="features">
-                            <li><i class="bi bi-check-circle"></i> 低延迟，高性能</li>
-                            <li><i class="bi bi-check-circle"></i> 地理就近访问</li>
-                            <li><i class="bi bi-check-circle"></i> 负载均衡</li>
-                            <li><i class="bi bi-check-circle"></i> 适合大规模应用</li>
-                        </ul>
-                        <div class="architecture-diagram">
-                            <h5>架构示意图</h5>
-                            <div style="display: flex; justify-content: center; align-items: center; gap: 10px; flex-wrap: wrap;">
-                                <div style="background: #e3f2fd; padding: 8px 12px; border-radius: 6px; font-size: 12px;">
-                                    <i class="bi bi-globe"></i> 亚洲
-                                </div>
-                                <i class="bi bi-arrow-right text-primary"></i>
-                                <div style="background: #e8f5e9; padding: 8px 12px; border-radius: 6px; font-size: 12px;">
-                                    <i class="bi bi-server"></i> 亚服
-                                </div>
-                                <div style="background: #e3f2fd; padding: 8px 12px; border-radius: 6px; font-size: 12px;">
-                                    <i class="bi bi-globe"></i> 欧洲
-                                </div>
-                                <i class="bi bi-arrow-right text-primary"></i>
-                                <div style="background: #e8f5e9; padding: 8px 12px; border-radius: 6px; font-size: 12px;">
-                                    <i class="bi bi-server"></i> 欧服
-                                </div>
-                                <div style="background: #e3f2fd; padding: 8px 12px; border-radius: 6px; font-size: 12px;">
-                                    <i class="bi bi-globe"></i> 美洲
-                                </div>
-                                <i class="bi bi-arrow-right text-primary"></i>
-                                <div style="background: #e8f5e9; padding: 8px 12px; border-radius: 6px; font-size: 12px;">
-                                    <i class="bi bi-server"></i> 美服
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="alert alert-info">
-                    <i class="bi bi-info-circle"></i>
-                    <strong>提示：</strong>分区分服模式需要配置多个服务器，全球同服模式只需配置一个服务器。
-                </div>
-            </div>
-
-            <!-- 步骤4: 转发规则配置 -->
-            <div class="step-content" id="step4">
                 <div class="step-header">
                     <h2><i class="bi bi-arrow-right-circle"></i> 转发规则配置</h2>
                     <p>配置流量转发规则，将外部请求转发到内部服务器</p>
@@ -1218,8 +1136,8 @@
                 </div>
             </div>
 
-            <!-- 步骤5: 配置确认 -->
-            <div class="step-content" id="step5">
+            <!-- 步骤4: 配置确认 -->
+            <div class="step-content" id="step4">
                 <div class="step-header">
                     <h2><i class="bi bi-check-circle"></i> 配置确认</h2>
                     <p>请确认以下配置信息无误后生成配置文件</p>
@@ -1254,14 +1172,6 @@
                 </div>
 
                 <div class="summary-card">
-                    <h4><i class="bi bi-diagram-3"></i> 架构配置</h4>
-                    <div class="summary-item">
-                        <span class="summary-label">部署架构:</span>
-                        <span class="summary-value" id="summaryArchitecture">--</span>
-                    </div>
-                </div>
-
-                <div class="summary-card">
                     <h4><i class="bi bi-arrow-right-circle"></i> 转发规则</h4>
                     <div id="summaryRules">
                         <!-- 规则摘要将通过 JavaScript 动态生成 -->
@@ -1276,7 +1186,7 @@
 
             <!-- 底部按钮 -->
             <div class="wizard-footer">
-                <button class="btn btn-secondary" id="btnBack" onclick="previousStep()" style="display: none;">
+                <button class="btn btn-secondary" id="btnBack" onclick="previousStep()">
                     <i class="bi bi-arrow-left"></i>
                     上一步
                 </button>
@@ -1325,7 +1235,7 @@ tcp://game.example.com 192.168.1.3:9999"></textarea>
         // 全局状态管理
         const state = {
             currentStep: 1,
-            totalSteps: 5,
+            totalSteps: 4,
             apiConfig: {
                 token: '',
                 email: '',
@@ -1336,7 +1246,6 @@ tcp://game.example.com 192.168.1.3:9999"></textarea>
                 domain: '',
                 projectTag: ''
             },
-            architecture: '',
             rules: []
         };
 
@@ -1367,14 +1276,79 @@ tcp://game.example.com 192.168.1.3:9999"></textarea>
                     if (state.apiConfig.accountId) document.getElementById('accountId').value = state.apiConfig.accountId;
                     if (state.domainConfig.domain) document.getElementById('domain').value = state.domainConfig.domain;
                     if (state.domainConfig.projectTag) document.getElementById('projectTag').value = state.domainConfig.projectTag;
-                    if (state.architecture) selectArchitecture(state.architecture, false);
+
                     
                     renderRules();
                     updateDomainPreview();
                 } catch (e) {
                     console.error('加载状态失败:', e);
                 }
+            } else {
+                // 如果没有保存的状态，填充默认数据
+                fillDefaultData();
             }
+        }
+
+        // 填充默认数据
+        function fillDefaultData() {
+            // 填充API配置默认值
+            state.apiConfig = {
+                token: 'your_cloudflare_api_token_here',
+                email: 'admin@example.com',
+                accountId: 'your_account_id_here',
+                connected: false
+            };
+            
+            // 填充域名配置默认值
+            state.domainConfig = {
+                domain: 'example.com',
+                projectTag: 'myproject'
+            };
+            
+
+            
+            // 填充转发规则默认数据
+            state.rules = [
+                {
+                    id: 1,
+                    subdomain: 'api',
+                    protocol: 'http',
+                    internalAddress: '192.168.1.100',
+                    internalPort: '8080'
+                },
+                {
+                    id: 2,
+                    subdomain: 'ws',
+                    protocol: 'ws',
+                    internalAddress: '192.168.1.101',
+                    internalPort: '8081'
+                },
+                {
+                    id: 3,
+                    subdomain: 'game',
+                    protocol: 'tcp',
+                    internalAddress: '192.168.1.102',
+                    internalPort: '9999'
+                }
+            ];
+            
+            // 更新表单中的值
+            document.getElementById('apiToken').value = state.apiConfig.token;
+            document.getElementById('apiEmail').value = state.apiConfig.email;
+            document.getElementById('accountId').value = state.apiConfig.accountId;
+            document.getElementById('domain').value = state.domainConfig.domain;
+            document.getElementById('projectTag').value = state.domainConfig.projectTag;
+            
+
+            
+            // 更新域名预览
+            updateDomainPreview();
+            
+            // 渲染规则
+            renderRules();
+            
+            // 保存初始状态
+            saveState();
         }
 
         // 更新 UI
@@ -1396,7 +1370,8 @@ tcp://game.example.com 192.168.1.3:9999"></textarea>
             }
             
             // 更新按钮显示
-            document.getElementById('btnBack').style.display = state.currentStep === 1 ? 'none' : 'block';
+            document.getElementById('btnBack').style.display = 'block';
+            document.getElementById('btnBack').style.visibility = state.currentStep === 1 ? 'hidden' : 'visible';
             const nextBtn = document.getElementById('btnNext');
             
             if (state.currentStep === state.totalSteps) {
@@ -1462,13 +1437,8 @@ tcp://game.example.com 192.168.1.3:9999"></textarea>
                         return false;
                     }
                     break;
+
                 case 3:
-                    if (!state.architecture) {
-                        alert('请选择部署架构');
-                        return false;
-                    }
-                    break;
-                case 4:
                     if (state.rules.length === 0) {
                         alert('请至少添加一条转发规则');
                         return false;
@@ -1535,19 +1505,7 @@ tcp://game.example.com 192.168.1.3:9999"></textarea>
             renderRules();
         }
 
-        // 选择架构
-        function selectArchitecture(arch, save = true) {
-            state.architecture = arch;
-            
-            document.querySelectorAll('.architecture-card').forEach(card => {
-                card.classList.remove('selected');
-            });
-            document.getElementById('arch' + arch.charAt(0).toUpperCase() + arch.slice(1)).classList.add('selected');
-            
-            if (save) {
-                saveState();
-            }
-        }
+
 
         // 添加规则
         function addRule() {
@@ -1744,7 +1702,7 @@ tcp://game.example.com 192.168.1.3:9999"></textarea>
             document.getElementById('summaryAccountId').textContent = state.apiConfig.accountId || '--';
             document.getElementById('summaryDomain').textContent = state.domainConfig.domain || '--';
             document.getElementById('summaryProjectTag').textContent = state.domainConfig.projectTag || '--';
-            document.getElementById('summaryArchitecture').textContent = state.architecture === 'global' ? '全球同服' : '分区分服';
+
             
             const rulesDiv = document.getElementById('summaryRules');
             if (state.rules.length > 0) {
