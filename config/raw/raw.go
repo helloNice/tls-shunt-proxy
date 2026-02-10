@@ -2,14 +2,15 @@ package raw
 
 type (
 	RawConfig struct {
-		Listen                                string
-		RedirectHttps                         string
-		InboundBufferSize, OutboundBufferSize int
-		Fallback                              string
-		VHosts                                []RawVHost
+		Listen             string `yaml:"listen"`
+		RedirectHttps      string `yaml:"redirecthttps"`
+		InboundBufferSize  int    `yaml:"inboundbuffersize"`
+		OutboundBufferSize int    `yaml:"outboundbuffersize"`
+		Fallback           string `yaml:"fallback"`
+		VHosts             []RawVHost `yaml:"vhosts"`
 		// WebUIListen: 管理界面监听地址，示例 127.0.0.1:8080
-		WebUIListen                           string
-		WildcardCerts                         []WildcardCertConfig
+		WebUIListen        string `yaml:"webui_listen"`
+		WildcardCerts      []WildcardCertConfig `yaml:"wildcard_certs"`
 	}
 	WildcardCertConfig struct {
 		Domain         string `yaml:"domain"`
@@ -29,33 +30,33 @@ type (
 		RetryDelay     int    `yaml:"retry_delay"`       // 重试间隔（秒），默认 30
 	}
 	RawVHost struct {
-		Name          string
-		TlsOffloading bool
-		ManagedCert   bool
-		Cert          string
-		Key           string
-		KeyType       string
-		Alpn          string
-		Protocols     string
-		Http          RawHttpHandler
-		Http2         []RawPathHandler
-		Trojan        RawHandler
-		Default       RawHandler
+		Name          string         `yaml:"name"`
+		TlsOffloading bool           `yaml:"tlsoffloading"`
+		ManagedCert   bool           `yaml:"managedcert"`
+		Cert          string         `yaml:"cert"`
+		Key           string         `yaml:"key"`
+		KeyType       string         `yaml:"keytype"`
+		Alpn          string         `yaml:"alpn"`
+		Protocols     string         `yaml:"protocols"`
+		Http          RawHttpHandler `yaml:"http"`
+		Http2         []RawPathHandler `yaml:"http2"`
+		Trojan        RawHandler      `yaml:"trojan"`
+		Default       RawHandler      `yaml:"default"`
 	}
 	RawHandler struct {
-		Handler string
-		Args    string
+		Handler string `yaml:"handler"`
+		Args    string `yaml:"args"`
 	}
 	RawHttpHandler struct {
-		Paths   []RawPathHandler
-		Handler string
-		Args    string
+		Paths   []RawPathHandler `yaml:"paths"`
+		Handler string            `yaml:"handler"`
+		Args    string            `yaml:"args"`
 	}
 	RawPathHandler struct {
-		Path       string
-		Handler    string
-		Args       string
-		TrimPrefix string
+		Path       string `yaml:"path"`
+		Handler    string `yaml:"handler"`
+		Args       string `yaml:"args"`
+		TrimPrefix string `yaml:"trimprefix"`
 	}
 
 	// WizardFormData Wizard 表单数据结构

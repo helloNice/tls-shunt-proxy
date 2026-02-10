@@ -253,11 +253,17 @@ func (w *WildcardManager) LoadFromConfig(configs []raw.WildcardCertConfig) error
 			continue
 		}
 
-		// 创建独立的 cache 和 certmagic 实例
-		cache := certmagic.NewCache(certmagic.CacheOptions{})
+		// 创建独立的 certmagic 实例
 		certConfig := certmagic.Config{
 			Storage: &certmagic.FileStorage{Path: "./"},
 		}
+
+		// 创建 cache
+		cache := certmagic.NewCache(certmagic.CacheOptions{
+			GetConfigForCert: func(certmagic.Certificate) (*certmagic.Config, error) {
+				return &certConfig, nil
+			},
+		})
 
 		// 获取主 CA
 		primaryCA := wc.CAProvider
@@ -384,7 +390,8 @@ func (w *WildcardManager) LoadFromConfig(configs []raw.WildcardCertConfig) error
 			// 带重试的证书申请
 			var err error
 			for attempt := 0; attempt < maxRetries; attempt++ {
-				err = magic.ManageAsync(ctx, []string{config.Domain})
+				// 使用同步的 ManageSync 方法等待证书申请完成
+				err = magic.ManageSync(ctx, []string{config.Domain})
 				if err == nil {
 					log.Printf("✓ 通配符证书申请成功: %s", config.Domain)
 					break // 成功，跳出循环

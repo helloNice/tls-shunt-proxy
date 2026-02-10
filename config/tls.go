@@ -85,13 +85,15 @@ func getCertificateFunc(managedCert bool, serverName, cert, key, keyType string,
 		if err != nil {
 			return nil, err
 		}
-	} else {
+	} else if cert != "" && key != "" {
+		// 只有配置了自定义证书才加载文件
 		_, err := magic.CacheUnmanagedCertificatePEMFile(context.TODO(), cert, key, nil)
 		if err != nil {
 			err = fmt.Errorf("fail to load tls key pair for %s: %v", serverName, err)
 			return nil, err
 		}
 	}
+	// 如果 cert 和 key 都为空且 managedCert 为 false，说明使用通配符证书，不加载文件
 
 	return func(clientHello *tls.ClientHelloInfo) (*tls.Certificate, error) {
 		// 优先使用通配符证书（如果匹配）
