@@ -187,23 +187,17 @@ func Start(configPath string, reloadMgr interface{}) {
 		sendAPIResponse(w, true, "零停机配置重载已启动，现有连接不会中断...", "", nil)
 	})
 
+	// 静态文件服务
+	staticFS := http.FileServer(http.Dir("webui/static"))
+	mux.Handle("/static/", http.StripPrefix("/static/", staticFS))
+
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
 			http.Error(w, "仅支持 GET", http.StatusMethodNotAllowed)
 			return
 		}
-		data, err := ioutil.ReadFile(configPath)
-		if err != nil {
-			// 如果文件不存在或读取失败，显示空配置而不是错误
-			log.Printf("读取配置文件失败: %v，将显示空配置", err)
-			data = []byte("")
-		}
-		// 如果文件为空，提供默认的提示信息
-		configText := string(data)
-		if configText == "" {
-			configText = "# 配置文件为空，请使用上方'新建配置'按钮创建配置\n# 或直接在此处编辑 YAML 配置"
-		}
-		_ = tmpl.Execute(w, struct{ ConfigYAML string }{ConfigYAML: configText})
+		// 新的配置向导界面不需要预先加载配置内容
+		_ = tmpl.Execute(w, nil)
 	})
 
 	mux.HandleFunc("/save", func(w http.ResponseWriter, r *http.Request) {
@@ -212,36 +206,69 @@ func Start(configPath string, reloadMgr interface{}) {
 			return
 		}
 		
+		var yamlText string
+		
+		// 支持两种提交方式：表单提交和 JSON 提交
+		contentType := r.Header.Get("Content-Type")
+		if strings.Contains(contentType, "application/json") {
+			// JSON 提交（来自配置向导）
+			var req struct {
+				Config string `json:"config"`
+			}
+			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+				sendAPIResponse(w, false, "", "解析 JSON 请求失败", nil)
+				return
+			}
+			yamlText = req.Config
+		} else {
+			// 表单提交（向后兼容旧的 YAML 编辑器）
+			if err := r.ParseForm(); err != nil {
+				http.Error(w, "解析表单失败", http.StatusBadRequest)
+				return
+			}
+			yamlText = r.FormValue("config")
+		}
+		
 		// 验证配置路径不包含路径遍历
 		cleanConfigPath := filepath.Clean(configPath)
 		if cleanConfigPath != configPath {
-			http.Error(w, "无效的配置路径", http.StatusBadRequest)
+			if strings.Contains(contentType, "application/json") {
+				sendAPIResponse(w, false, "", "无效的配置路径", nil)
+			} else {
+				http.Error(w, "无效的配置路径", http.StatusBadRequest)
+			}
 			return
 		}
 		
 		expectedDir := filepath.Dir(cleanConfigPath)
 		actualDir := filepath.Dir(cleanConfigPath)
 		if expectedDir != actualDir {
-			http.Error(w, "配置路径超出允许范围", http.StatusBadRequest)
+			if strings.Contains(contentType, "application/json") {
+				sendAPIResponse(w, false, "", "配置路径超出允许范围", nil)
+			} else {
+				http.Error(w, "配置路径超出允许范围", http.StatusBadRequest)
+			}
 			return
 		}
-		
-		if err := r.ParseForm(); err != nil {
-			http.Error(w, "解析表单失败", http.StatusBadRequest)
-			return
-		}
-		yamlText := r.FormValue("config")
 		
 		// 基本语法校验
 		var tmp interface{}
 		if err := yaml.Unmarshal([]byte(yamlText), &tmp); err != nil {
-			http.Error(w, "YAML 校验失败", http.StatusBadRequest)
+			if strings.Contains(contentType, "application/json") {
+				sendAPIResponse(w, false, "", "YAML 校验失败", nil)
+			} else {
+				http.Error(w, "YAML 校验失败", http.StatusBadRequest)
+			}
 			return
 		}
 		
 		// 业务逻辑验证
 		if err := validateConfigBusinessLogic([]byte(yamlText)); err != nil {
-			http.Error(w, "配置验证失败: "+err.Error(), http.StatusBadRequest)
+			if strings.Contains(contentType, "application/json") {
+				sendAPIResponse(w, false, "", "配置验证失败: "+err.Error(), nil)
+			} else {
+				http.Error(w, "配置验证失败: "+err.Error(), http.StatusBadRequest)
+			}
 			return
 		}
 		
@@ -253,12 +280,20 @@ func Start(configPath string, reloadMgr interface{}) {
 		tmpFile := configPath + ".tmp"
 		if err := ioutil.WriteFile(tmpFile, []byte(yamlText), 0600); err != nil {
 			log.Printf("写入临时文件失败: %v", err)
-			http.Error(w, "内部服务器错误", http.StatusInternalServerError)
+			if strings.Contains(contentType, "application/json") {
+				sendAPIResponse(w, false, "", "内部服务器错误", nil)
+			} else {
+				http.Error(w, "内部服务器错误", http.StatusInternalServerError)
+			}
 			return
 		}
 		if err := os.Rename(tmpFile, configPath); err != nil {
 			log.Printf("替换配置文件失败: %v", err)
-			http.Error(w, "内部服务器错误", http.StatusInternalServerError)
+			if strings.Contains(contentType, "application/json") {
+				sendAPIResponse(w, false, "", "内部服务器错误", nil)
+			} else {
+				http.Error(w, "内部服务器错误", http.StatusInternalServerError)
+			}
 			return
 		}
 		
@@ -266,7 +301,11 @@ func Start(configPath string, reloadMgr interface{}) {
 		execPath, err := os.Executable()
 		if err != nil {
 			log.Printf("获取可执行文件路径失败: %v", err)
-			http.Error(w, "内部服务器错误", http.StatusInternalServerError)
+			if strings.Contains(contentType, "application/json") {
+				sendAPIResponse(w, false, "", "内部服务器错误", nil)
+			} else {
+				http.Error(w, "内部服务器错误", http.StatusInternalServerError)
+			}
 			return
 		}
 		// 使用固定参数而不是原始参数，防止命令注入
@@ -276,10 +315,21 @@ func Start(configPath string, reloadMgr interface{}) {
 		cmd.Stderr = os.Stderr
 		if err := cmd.Start(); err != nil {
 			log.Printf("启动新进程失败: %v", err)
-			http.Error(w, "内部服务器错误", http.StatusInternalServerError)
+			if strings.Contains(contentType, "application/json") {
+				sendAPIResponse(w, false, "", "内部服务器错误", nil)
+			} else {
+				http.Error(w, "内部服务器错误", http.StatusInternalServerError)
+			}
 			return
 		}
-		io.WriteString(w, "保存成功，正在重启服务以应用新配置...\n")
+		
+		// 根据请求类型返回不同的响应
+		if strings.Contains(contentType, "application/json") {
+			sendAPIResponse(w, true, "配置保存成功，正在重启服务...", "", nil)
+		} else {
+			io.WriteString(w, "保存成功，正在重启服务以应用新配置...\n")
+		}
+		
 		go func() {
 			_ = cmd.Process.Release()
 			os.Exit(0)
@@ -343,6 +393,12 @@ func basicAuthMiddleware(next http.Handler) http.Handler {
 	}
 	expected := "Basic " + base64.StdEncoding.EncodeToString([]byte(user+":"+pass))
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// 静态文件不需要认证
+		if strings.HasPrefix(r.URL.Path, "/static/") {
+			next.ServeHTTP(w, r)
+			return
+		}
+		
 		received := r.Header.Get("Authorization")
 		if subtle.ConstantTimeCompare([]byte(expected), []byte(received)) != 1 {
 			w.Header().Set("WWW-Authenticate", `Basic realm="tls-shunt-proxy 管理界面"`)

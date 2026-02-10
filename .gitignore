@@ -3,3 +3,4 @@ config.yaml
 .idea
 *.exe
 tls-shunt-proxy
+tls-shunt-proxy-linux-amd64

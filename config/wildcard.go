@@ -213,7 +213,7 @@ func (w *WildcardManager) LoadFromConfig(configs []raw.WildcardCertConfig) error
 		for _, err := range validationErrors {
 			errMsg += fmt.Sprintf("  - %s\n", err)
 		}
-		return fmt.Errorf(errMsg)
+		return fmt.Errorf("%s", errMsg)
 	}
 
 	if len(validConfigs) == 0 {
@@ -342,7 +342,7 @@ func (w *WildcardManager) LoadFromConfig(configs []raw.WildcardCertConfig) error
 		for _, err := range setupErrors {
 			errMsg += fmt.Sprintf("  - %s\n", err)
 		}
-		return fmt.Errorf(errMsg)
+		return fmt.Errorf("%s", errMsg)
 	}
 
 	// 申请所有通配符证书
@@ -424,7 +424,7 @@ func (w *WildcardManager) LoadFromConfig(configs []raw.WildcardCertConfig) error
 		for _, err := range certErrors {
 			errMsg += fmt.Sprintf("  - %s\n", err)
 		}
-		return fmt.Errorf(errMsg)
+		return fmt.Errorf("%s", errMsg)
 	}
 
 	log.Printf("所有通配符证书申请成功，共 %d 个域名: %v", len(domains), domains)
