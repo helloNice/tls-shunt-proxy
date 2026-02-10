@@ -4,3 +4,4 @@ config.yaml
 *.exe
 tls-shunt-proxy
 tls-shunt-proxy-linux-amd64
+*.gz

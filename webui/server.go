@@ -17,6 +17,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/liberal-boy/tls-shunt-proxy/config"
 	"github.com/liberal-boy/tls-shunt-proxy/config/raw"
 	"golang.org/x/net/http2"
 	"gopkg.in/yaml.v2"
@@ -112,6 +113,42 @@ func Start(configPath string, reloadMgr interface{}) {
 		sendAPIResponse(w, true, "配置生成成功", "", map[string]string{"config": string(yamlData)})
 	})
 
+	// API: 使用策略模式生成配置（新的配置向导）
+	mux.HandleFunc("/api/generate-strategy-config", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			sendAPIResponse(w, false, "", "仅支持 POST", nil)
+			return
+		}
+
+		var request config.ConfigRequest
+		if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+			log.Printf("解析请求失败: %v", err)
+			sendAPIResponse(w, false, "", "解析请求失败", nil)
+			return
+		}
+
+		// 验证请求数据
+		if request.Domain == "" {
+			sendAPIResponse(w, false, "", "域名不能为空", nil)
+			return
+		}
+
+		if request.CloudflareToken == "" {
+			sendAPIResponse(w, false, "", "Cloudflare Token 不能为空", nil)
+			return
+		}
+
+		// 使用策略生成器生成配置
+		configStr, err := config.GenerateFullConfig(&request)
+		if err != nil {
+			log.Printf("生成配置失败: %v", err)
+			sendAPIResponse(w, false, "", "生成配置失败: "+err.Error(), nil)
+			return
+		}
+
+		sendAPIResponse(w, true, "配置生成成功", "", map[string]string{"config": configStr})
+	})
+
 	// API: 获取支持的架构列表
 	mux.HandleFunc("/api/architectures", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
@@ -198,6 +235,77 @@ func Start(configPath string, reloadMgr interface{}) {
 		}
 		// 新的配置向导界面不需要预先加载配置内容
 		_ = tmpl.Execute(w, nil)
+	})
+
+	// API: 保存策略生成的配置
+	mux.HandleFunc("/api/save-strategy-config", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			sendAPIResponse(w, false, "", "仅支持 POST", nil)
+			return
+		}
+
+		var req struct {
+			Config string `json:"config"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			log.Printf("解析请求失败: %v", err)
+			sendAPIResponse(w, false, "", "解析请求失败", nil)
+			return
+		}
+
+		if req.Config == "" {
+			sendAPIResponse(w, false, "", "配置不能为空", nil)
+			return
+		}
+
+		// 验证配置语法
+		if err := validateConfigBusinessLogic([]byte(req.Config)); err != nil {
+			log.Printf("配置验证失败: %v", err)
+			sendAPIResponse(w, false, "", "配置验证失败: "+err.Error(), nil)
+			return
+		}
+
+		// 使用互斥锁保护配置文件写入
+		configMutex.Lock()
+		defer configMutex.Unlock()
+
+		// 原子写入
+		tmpFile := configPath + ".tmp"
+		if err := ioutil.WriteFile(tmpFile, []byte(req.Config), 0600); err != nil {
+			log.Printf("写入临时文件失败: %v", err)
+			sendAPIResponse(w, false, "", "内部服务器错误", nil)
+			return
+		}
+		if err := os.Rename(tmpFile, configPath); err != nil {
+			log.Printf("替换配置文件失败: %v", err)
+			sendAPIResponse(w, false, "", "内部服务器错误", nil)
+			return
+		}
+
+		// 启动新进程并退出当前进程 -> 实现 reload
+		execPath, err := os.Executable()
+		if err != nil {
+			log.Printf("获取可执行文件路径失败: %v", err)
+			sendAPIResponse(w, false, "", "内部服务器错误", nil)
+			return
+		}
+		args := []string{"-config", configPath}
+		cmd := exec.Command(execPath, args...)
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		if err := cmd.Start(); err != nil {
+			log.Printf("启动新进程失败: %v", err)
+			sendAPIResponse(w, false, "", "内部服务器错误", nil)
+			return
+		}
+
+		log.Println("配置保存成功，正在重启服务...")
+		sendAPIResponse(w, true, "配置保存成功，正在重启服务...", "", nil)
+
+		go func() {
+			_ = cmd.Process.Release()
+			os.Exit(0)
+		}()
 	})
 
 	mux.HandleFunc("/save", func(w http.ResponseWriter, r *http.Request) {

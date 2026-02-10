@@ -1005,14 +1005,7 @@
                             <input type="email" class="form-control" id="apiEmail" placeholder="输入您的 Cloudflare 账户邮箱">
                         </div>
 
-                        <div class="mb-4">
-                            <label class="form-label" for="accountId">
-                                Account ID
-                                <i class="bi bi-question-circle help-tooltip" data-tooltip="可以在 Cloudflare 仪表板右侧边栏找到"></i>
-                            </label>
-                            <input type="text" class="form-control" id="accountId" placeholder="输入您的 Account ID">
                         </div>
-                    </div>
 
                     <div class="d-grid gap-2 col-6 mx-auto">
                         <button class="btn btn-primary" id="testConnectionBtn" onclick="testConnection()">
@@ -1153,11 +1146,7 @@
                         <span class="summary-label">邮箱:</span>
                         <span class="summary-value" id="summaryApiEmail">--</span>
                     </div>
-                    <div class="summary-item">
-                        <span class="summary-label">Account ID:</span>
-                        <span class="summary-value" id="summaryAccountId">--</span>
                     </div>
-                </div>
 
                 <div class="summary-card">
                     <h4><i class="bi bi-globe2"></i> 域名配置</h4>
@@ -1239,7 +1228,6 @@ tcp://game.example.com 192.168.1.3:9999"></textarea>
             apiConfig: {
                 token: '',
                 email: '',
-                accountId: '',
                 connected: false
             },
             domainConfig: {
@@ -1295,7 +1283,6 @@ tcp://game.example.com 192.168.1.3:9999"></textarea>
             state.apiConfig = {
                 token: 'your_cloudflare_api_token_here',
                 email: 'admin@example.com',
-                accountId: 'your_account_id_here',
                 connected: false
             };
             
@@ -1335,7 +1322,6 @@ tcp://game.example.com 192.168.1.3:9999"></textarea>
             // 更新表单中的值
             document.getElementById('apiToken').value = state.apiConfig.token;
             document.getElementById('apiEmail').value = state.apiConfig.email;
-            document.getElementById('accountId').value = state.apiConfig.accountId;
             document.getElementById('domain').value = state.domainConfig.domain;
             document.getElementById('projectTag').value = state.domainConfig.projectTag;
             
@@ -1452,9 +1438,8 @@ tcp://game.example.com 192.168.1.3:9999"></textarea>
         function testConnection() {
             const token = document.getElementById('apiToken').value.trim();
             const email = document.getElementById('apiEmail').value.trim();
-            const accountId = document.getElementById('accountId').value.trim();
             
-            if (!token || !email || !accountId) {
+            if (!token || !email) {
                 alert('请填写完整的 API 配置信息');
                 return;
             }
@@ -1470,7 +1455,6 @@ tcp://game.example.com 192.168.1.3:9999"></textarea>
             
             state.apiConfig.token = token;
             state.apiConfig.email = email;
-            state.apiConfig.accountId = accountId;
             
             // 模拟 API 调用
             setTimeout(() => {
@@ -1617,7 +1601,27 @@ tcp://game.example.com 192.168.1.3:9999"></textarea>
             if (rule) {
                 rule[field] = value;
                 saveState();
-                renderRules();
+                // 只更新预览信息，不重新渲染整个表格以避免失去焦点
+                updateRulePreview(id);
+            }
+        }
+
+        // 更新单个规则的预览信息
+        function updateRulePreview(id) {
+            const rule = state.rules.find(r => r.id === id);
+            if (!rule) return;
+
+            const index = state.rules.findIndex(r => r.id === id);
+            const domain = state.domainConfig.domain;
+            const accessUrl = rule.subdomain ? `${rule.subdomain}.${domain}:443` : `${domain}:443`;
+            const preview = rule.internalAddress && rule.internalPort 
+                ? `${accessUrl} → ${rule.internalAddress}:${rule.internalPort}` 
+                : '待配置';
+
+            // 查找预览元素并更新
+            const previewCell = document.querySelector(`tr:nth-child(${index + 1}) .preview-badge`);
+            if (previewCell) {
+                previewCell.textContent = preview;
             }
         }
 
@@ -1745,11 +1749,6 @@ tcp://game.example.com 192.168.1.3:9999"></textarea>
 
         document.getElementById('apiEmail').addEventListener('input', function() {
             state.apiConfig.email = this.value.trim();
-            saveState();
-        });
-
-        document.getElementById('accountId').addEventListener('input', function() {
-            state.apiConfig.accountId = this.value.trim();
             saveState();
         });
 
