@@ -57,27 +57,40 @@ func Start(configPath string, reloadMgr interface{}) {
 		
 		// 验证输入
 		var req struct {
-			APIKey    string `json:"api_key"`
-			AccountID string `json:"account_id"`
+			APIKey    string `json:"api_key"`      // 兼容旧版，对应 API Token
+			AccountID string `json:"account_id"`   // 兼容旧版
+			Token     string `json:"token"`        // 新版参数名，对应 API Token
+			Email     string `json:"email"`        // 新版参数名
 		}
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			sendAPIResponse(w, false, "", "解析请求失败", nil)
 			return
 		}
 
-		// 验证 API 密钥格式
-		if len(req.APIKey) < 32 || len(req.APIKey) > 255 {
-			sendAPIResponse(w, false, "", "API 密钥长度无效", nil)
+		// 使用 token 或 api_key（优先使用 token）
+		token := req.Token
+		if token == "" {
+			token = req.APIKey
+		}
+		
+		// 验证 API Token 格式
+		if token == "" {
+			sendAPIResponse(w, false, "", "API Token 不能为空", nil)
+			return
+		}
+		
+		if len(token) < 32 || len(token) > 255 {
+			sendAPIResponse(w, false, "", "API Token 长度无效", nil)
 			return
 		}
 
-		// 验证 AccountID 格式
+		// 验证 AccountID 格式（如果提供）
 		if req.AccountID != "" && (len(req.AccountID) != 32 || !isValidHex(req.AccountID)) {
 			sendAPIResponse(w, false, "", "Account ID 格式无效", nil)
 			return
 		}
 
-		api := NewCloudflareAPI(req.APIKey, req.AccountID)
+		api := NewCloudflareAPI(token, req.AccountID)
 		valid, message, err := api.VerifyCredentials()
 		if err != nil {
 			sendAPIResponse(w, false, "", "验证失败: "+err.Error(), nil)
