@@ -418,6 +418,10 @@ func sendSignal(signalType string) error {
 		if err != nil {
 			return fmt.Errorf("查找进程失败: %w", err)
 		}
+		// 尝试发送信号以检查权限
+		if err := process.Signal(syscall.Signal(0)); err != nil {
+			return fmt.Errorf("没有权限访问进程 %d: %w", pid, err)
+		}
 		if err := process.Signal(syscall.SIGHUP); err != nil {
 			return fmt.Errorf("发送信号失败: %w", err)
 		}
@@ -431,6 +435,10 @@ func sendSignal(signalType string) error {
 		if err != nil {
 			return fmt.Errorf("查找进程失败: %w", err)
 		}
+		// 尝试发送信号以检查权限
+		if err := process.Signal(syscall.Signal(0)); err != nil {
+			return fmt.Errorf("没有权限访问进程 %d: %w", pid, err)
+		}
 		if err := process.Signal(syscall.SIGTERM); err != nil {
 			return fmt.Errorf("发送信号失败: %w", err)
 		}
@@ -443,6 +451,10 @@ func sendSignal(signalType string) error {
 		process, err := os.FindProcess(pid)
 		if err != nil {
 			return fmt.Errorf("查找进程失败: %w", err)
+		}
+		// 尝试发送信号以检查权限
+		if err := process.Signal(syscall.Signal(0)); err != nil {
+			return fmt.Errorf("没有权限访问进程 %d: %w", pid, err)
 		}
 		if err := process.Signal(syscall.SIGQUIT); err != nil {
 			return fmt.Errorf("发送信号失败: %w", err)
