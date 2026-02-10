@@ -14,6 +14,7 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"runtime"
 	"strconv"
 	"strings"
 	"syscall"
@@ -418,12 +419,9 @@ func sendSignal(signalType string) error {
 		if err != nil {
 			return fmt.Errorf("查找进程失败: %w", err)
 		}
-		// 尝试发送信号以检查权限
-		if err := process.Signal(syscall.Signal(0)); err != nil {
-			return fmt.Errorf("没有权限访问进程 %d: %w", pid, err)
-		}
+		// 尝试发送信号，如果失败可能是权限问题或进程不存在
 		if err := process.Signal(syscall.SIGHUP); err != nil {
-			return fmt.Errorf("发送信号失败: %w", err)
+			return fmt.Errorf("发送信号失败 (可能没有权限或进程不存在): %w", err)
 		}
 		fmt.Println("配置重载信号已发送")
 		return nil
@@ -435,12 +433,9 @@ func sendSignal(signalType string) error {
 		if err != nil {
 			return fmt.Errorf("查找进程失败: %w", err)
 		}
-		// 尝试发送信号以检查权限
-		if err := process.Signal(syscall.Signal(0)); err != nil {
-			return fmt.Errorf("没有权限访问进程 %d: %w", pid, err)
-		}
+		// 尝试发送信号，如果失败可能是权限问题或进程不存在
 		if err := process.Signal(syscall.SIGTERM); err != nil {
-			return fmt.Errorf("发送信号失败: %w", err)
+			return fmt.Errorf("发送信号失败 (可能没有权限或进程不存在): %w", err)
 		}
 		fmt.Println("停止信号已发送")
 		return nil
@@ -452,12 +447,9 @@ func sendSignal(signalType string) error {
 		if err != nil {
 			return fmt.Errorf("查找进程失败: %w", err)
 		}
-		// 尝试发送信号以检查权限
-		if err := process.Signal(syscall.Signal(0)); err != nil {
-			return fmt.Errorf("没有权限访问进程 %d: %w", pid, err)
-		}
+		// 尝试发送信号，如果失败可能是权限问题或进程不存在
 		if err := process.Signal(syscall.SIGQUIT); err != nil {
-			return fmt.Errorf("发送信号失败: %w", err)
+			return fmt.Errorf("发送信号失败 (可能没有权限或进程不存在): %w", err)
 		}
 		fmt.Println("退出信号已发送")
 		return nil
@@ -472,65 +464,120 @@ func findMasterPID() (int, error) {
 	// 获取当前进程 PID，避免向自己发送信号
 	currentPID := os.Getpid()
 
-	// 使用 pgrep 查找进程，使用更精确的匹配
-	cmd := exec.Command("pgrep", "-x", "tls-shunt-proxy") // -x 参数精确匹配进程名
-	output, err := cmd.Output()
-	if err != nil {
-		// pgrep 不可用，尝试使用 ps
-		cmd = exec.Command("ps", "-eo", "pid,comm") // 只获取 PID 和命令名
-		output, err = cmd.Output()
-		if err != nil {
-			return 0, fmt.Errorf("无法查找进程: %w", err)
-		}
-
-		// 解析 ps 输出
-		lines := strings.Split(string(output), "\n")
-		for _, line := range lines {
-			line = strings.TrimSpace(line)
-			if line == "" {
-				continue
-			}
-			fields := strings.Fields(line)
-			if len(fields) >= 2 {
-				// 检查命令名是否匹配
-				comm := fields[1]
-				// 提取命令名部分（去除路径）
-				if slashIndex := strings.LastIndex(comm, "/"); slashIndex != -1 {
-					comm = comm[slashIndex+1:]
-				}
-				
-				if comm == "tls-shunt-proxy" || comm == "tls-shunt-proxy.exe" {
-					pid, err := strconv.Atoi(fields[0])
-					if err == nil && pid != currentPID { // 确保不是当前进程
-						return pid, nil
-					}
-				}
-			}
-		}
-
-		return 0, fmt.Errorf("未找到 tls-shunt-proxy 进程")
+	// 根据操作系统选择合适的进程查找方法
+	var pids []int
+	var err error
+	
+	if runtime.GOOS == "windows" {
+		pids, err = findPIDsWindows("tls-shunt-proxy.exe")
+	} else {
+		pids, err = findPIDsUnix("tls-shunt-proxy")
 	}
-
-	// 解析 pgrep 输出
-	pids := strings.Split(strings.TrimSpace(string(output)), "\n")
-	for _, pidStr := range pids {
-		pidStr = strings.TrimSpace(pidStr)
-		if pidStr == "" {
-			continue
-		}
-		
-		pid, err := strconv.Atoi(pidStr)
-		if err != nil {
-			continue
-		}
-		
-		// 确保不是当前进程
+	
+	if err != nil {
+		return 0, fmt.Errorf("无法查找进程: %w", err)
+	}
+	
+	// 查找不是当前进程的第一个匹配 PID
+	for _, pid := range pids {
 		if pid != currentPID {
 			return pid, nil
 		}
 	}
 
 	return 0, fmt.Errorf("未找到其他 tls-shunt-proxy 进程")
+}
+
+// findPIDsUnix 在 Unix 系统上查找进程 ID
+func findPIDsUnix(processName string) ([]int, error) {
+	// 尝试使用 pgrep
+	cmd := exec.Command("pgrep", "-x", processName)
+	output, err := cmd.Output()
+	if err == nil {
+		var pids []int
+		pidStrings := strings.Split(strings.TrimSpace(string(output)), "\n")
+		for _, pidStr := range pidStrings {
+			pidStr = strings.TrimSpace(pidStr)
+			if pidStr == "" {
+				continue
+			}
+			pid, err := strconv.Atoi(pidStr)
+			if err == nil {
+				pids = append(pids, pid)
+			}
+		}
+		return pids, nil
+	}
+
+	// pgrep 不可用，尝试使用 ps
+	cmd = exec.Command("ps", "-eo", "pid,comm") // 只获取 PID 和命令名
+	output, err = cmd.Output()
+	if err != nil {
+		return nil, err
+	}
+
+	var pids []int
+	lines := strings.Split(string(output), "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		fields := strings.Fields(line)
+		if len(fields) >= 2 {
+			// 检查命令名是否匹配
+			comm := fields[1]
+			// 提取命令名部分（去除路径）
+			if slashIndex := strings.LastIndex(comm, "/"); slashIndex != -1 {
+				comm = comm[slashIndex+1:]
+			}
+			
+			if comm == processName || comm == processName+".exe" {
+				pid, err := strconv.Atoi(fields[0])
+				if err == nil {
+					pids = append(pids, pid)
+				}
+			}
+		}
+	}
+
+	return pids, nil
+}
+
+// findPIDsWindows 在 Windows 系统上查找进程 ID
+func findPIDsWindows(processName string) ([]int, error) {
+	// 使用 tasklist 命令
+	cmd := exec.Command("tasklist", "/fo", "csv", "/nh") // CSV 格式，无标题
+	output, err := cmd.Output()
+	if err != nil {
+		return nil, err
+	}
+
+	var pids []int
+	lines := strings.Split(string(output), "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		
+		// 解析 CSV 格式的输出，第一列是进程名，第二列是 PID
+		// 由于可能包含逗号在引号内，我们使用简单的分割
+		fields := strings.Split(line, ",")
+		if len(fields) >= 2 {
+			procName := strings.Trim(fields[0], "\"")
+			pidStr := strings.Trim(fields[1], "\"")
+			
+			if procName == processName {
+				pid, err := strconv.Atoi(pidStr)
+				if err == nil {
+					pids = append(pids, pid)
+				}
+			}
+		}
+	}
+
+	return pids, nil
 }
 
 // printHelp 打印帮助信息
