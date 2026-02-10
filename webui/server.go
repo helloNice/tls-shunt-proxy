@@ -557,11 +557,8 @@ func sendAPIResponse(w http.ResponseWriter, success bool, message, errorMsg stri
 
 // reloadByRestart 通过重启方式重载配置
 func reloadByRestart() {
-	// 从环境变量或默认值获取配置路径
-	configPath := os.Getenv("CONFIG_PATH")
-	if configPath == "" {
-		configPath = "./config.yaml" // 默认配置文件路径
-	}
+	// 使用固定的配置路径，不从环境变量获取以防止注入
+	configPath := "./config.yaml" // 使用固定路径
 	
 	execPath, err := os.Executable()
 	if err != nil {
