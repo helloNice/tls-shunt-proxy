@@ -308,8 +308,8 @@ func GenerateFullConfig(request *ConfigRequest) (string, error) {
 		}
 	}
 
-	// 组合所有配置
-	return baseConfig + "\n" + strings.Join(vhostsParts, "\n"), nil
+	// 组合所有配置，vhost 之间用空行分隔
+	return baseConfig + "\n" + strings.Join(vhostsParts, "\n\n"), nil
 }
 
 // ConfigRequestBuilder 配置请求构建器

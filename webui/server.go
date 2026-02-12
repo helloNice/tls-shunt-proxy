@@ -162,6 +162,104 @@ func Start(configPath string, reloadMgr interface{}) {
 		sendAPIResponse(w, true, "配置生成成功", "", map[string]string{"config": configStr})
 	})
 
+	// API: 从向导状态生成配置
+	mux.HandleFunc("/api/generate-wizard-config", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			sendAPIResponse(w, false, "", "仅支持 POST", nil)
+			return
+		}
+
+		var request struct {
+			APIToken   string                 `json:"api_token"`
+			APIEmail   string                 `json:"api_email"`
+			Domain     string                 `json:"domain"`
+			ProjectTag string                 `json:"project_tag"`
+			Rules      []map[string]interface{} `json:"rules"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+			log.Printf("解析请求失败: %v", err)
+			sendAPIResponse(w, false, "", "解析请求失败", nil)
+			return
+		}
+
+		// 验证请求数据
+		if request.Domain == "" {
+			sendAPIResponse(w, false, "", "域名不能为空", nil)
+			return
+		}
+
+		if request.APIToken == "" {
+			sendAPIResponse(w, false, "", "API Token 不能为空", nil)
+			return
+		}
+
+		// 构建 ConfigRequest
+		configRequest := &config.ConfigRequest{
+			Domain:          request.Domain,
+			CloudflareToken: request.APIToken,
+			Services:        []config.ServiceConfig{},
+		}
+
+		// 处理转发规则
+		for _, rule := range request.Rules {
+			subdomain, _ := rule["subdomain"].(string)
+			protocol, _ := rule["protocol"].(string)
+			// 兼容两种格式：internal_address 和 internalAddress
+			internalAddress, _ := rule["internal_address"].(string)
+			if internalAddress == "" {
+				internalAddress, _ = rule["internalAddress"].(string)
+			}
+			internalPort, _ := rule["internal_port"].(string)
+			if internalPort == "" {
+				internalPort, _ = rule["internalPort"].(string)
+			}
+
+			if subdomain == "" || internalAddress == "" || internalPort == "" {
+				log.Printf("跳过无效规则: subdomain=%s, internalAddress=%s, internalPort=%s", subdomain, internalAddress, internalPort)
+				continue
+			}
+
+			// 转换端口号为整数
+			port := 0
+			fmt.Sscanf(internalPort, "%d", &port)
+			if port <= 0 {
+				port = 8080 // 默认端口
+			}
+
+			// 根据协议类型添加服务
+			switch protocol {
+			case "http", "https":
+				configRequest.Services = append(configRequest.Services, config.ServiceConfig{
+					Subdomain:   subdomain,
+					Type:        "http",
+					BackendPort: port,
+				})
+			case "ws", "wss":
+				configRequest.Services = append(configRequest.Services, config.ServiceConfig{
+					Subdomain:   subdomain,
+					Type:        "websocket",
+					BackendPort: port,
+				})
+			case "tcp":
+				configRequest.Services = append(configRequest.Services, config.ServiceConfig{
+					Subdomain:   subdomain,
+					Type:        "tcp",
+					BackendPort: port,
+				})
+			}
+		}
+
+		// 使用策略生成器生成配置
+		configStr, err := config.GenerateFullConfig(configRequest)
+		if err != nil {
+			log.Printf("生成配置失败: %v", err)
+			sendAPIResponse(w, false, "", "生成配置失败: "+err.Error(), nil)
+			return
+		}
+
+		sendAPIResponse(w, true, "配置生成成功", "", map[string]string{"config": configStr})
+	})
+
 	// API: 获取支持的架构列表
 	mux.HandleFunc("/api/architectures", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
@@ -258,7 +356,8 @@ func Start(configPath string, reloadMgr interface{}) {
 		}
 
 		var req struct {
-			Config string `json:"config"`
+			Config     string `json:"config"`
+			ConfigName string `json:"config_name"` // 配置文件名（不含路径）
 		}
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			log.Printf("解析请求失败: %v", err)
@@ -278,47 +377,67 @@ func Start(configPath string, reloadMgr interface{}) {
 			return
 		}
 
+		// 确定配置文件路径
+		savePath := configPath
+		if req.ConfigName != "" {
+			// 如果指定了配置文件名，保存到 /etc/tls-shunt-proxy/ 目录
+			configDir := "/etc/tls-shunt-proxy/"
+			// 清理文件名，防止路径遍历
+			cleanName := filepath.Base(req.ConfigName)
+			// 确保文件名以 .yaml 结尾
+			if !strings.HasSuffix(cleanName, ".yaml") && !strings.HasSuffix(cleanName, ".yml") {
+				cleanName += ".yaml"
+			}
+			savePath = filepath.Join(configDir, cleanName)
+		}
+
 		// 使用互斥锁保护配置文件写入
 		configMutex.Lock()
 		defer configMutex.Unlock()
 
 		// 原子写入
-		tmpFile := configPath + ".tmp"
+		tmpFile := savePath + ".tmp"
 		if err := ioutil.WriteFile(tmpFile, []byte(req.Config), 0600); err != nil {
 			log.Printf("写入临时文件失败: %v", err)
 			sendAPIResponse(w, false, "", "内部服务器错误", nil)
 			return
 		}
-		if err := os.Rename(tmpFile, configPath); err != nil {
+		if err := os.Rename(tmpFile, savePath); err != nil {
 			log.Printf("替换配置文件失败: %v", err)
 			sendAPIResponse(w, false, "", "内部服务器错误", nil)
 			return
 		}
 
-		// 启动新进程并退出当前进程 -> 实现 reload
-		execPath, err := os.Executable()
-		if err != nil {
-			log.Printf("获取可执行文件路径失败: %v", err)
-			sendAPIResponse(w, false, "", "内部服务器错误", nil)
-			return
-		}
-		args := []string{"-config", configPath}
-		cmd := exec.Command(execPath, args...)
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		if err := cmd.Start(); err != nil {
-			log.Printf("启动新进程失败: %v", err)
-			sendAPIResponse(w, false, "", "内部服务器错误", nil)
-			return
-		}
+		// 如果保存的是主配置文件，则重启服务
+		if savePath == configPath {
+			execPath, err := os.Executable()
+			if err != nil {
+				log.Printf("获取可执行文件路径失败: %v", err)
+				sendAPIResponse(w, false, "", "内部服务器错误", nil)
+				return
+			}
+			args := []string{"-config", configPath}
+			cmd := exec.Command(execPath, args...)
+			cmd.Stdout = os.Stdout
+			cmd.Stderr = os.Stderr
+			if err := cmd.Start(); err != nil {
+				log.Printf("启动新进程失败: %v", err)
+				sendAPIResponse(w, false, "", "内部服务器错误", nil)
+				return
+			}
 
-		log.Println("配置保存成功，正在重启服务...")
-		sendAPIResponse(w, true, "配置保存成功，正在重启服务...", "", nil)
+			log.Println("配置保存成功，正在重启服务...")
+			sendAPIResponse(w, true, "配置保存成功，正在重启服务...", "", nil)
 
-		go func() {
-			_ = cmd.Process.Release()
-			os.Exit(0)
-		}()
+			go func() {
+				_ = cmd.Process.Release()
+				os.Exit(0)
+			}()
+		} else {
+			// 只保存配置文件，不重启服务
+			log.Printf("配置保存成功: %s", savePath)
+			sendAPIResponse(w, true, "配置保存成功: "+savePath, "", map[string]string{"path": savePath})
+		}
 	})
 
 	mux.HandleFunc("/save", func(w http.ResponseWriter, r *http.Request) {

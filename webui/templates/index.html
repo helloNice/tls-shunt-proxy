@@ -672,6 +672,31 @@
             margin-bottom: 18px;
         }
 
+        .summary-card.collapsible {
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .summary-card.collapsible h4 {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .summary-card.collapsible .collapse-icon {
+            transition: transform 0.3s ease;
+            font-size: 14px;
+            color: #666;
+        }
+
+        .summary-card.collapsed .collapse-icon {
+            transform: rotate(-90deg);
+        }
+
+        .summary-card.collapsed .summary-content {
+            display: none;
+        }
+
         .summary-card h4 {
             color: #333;
             margin-bottom: 12px;
@@ -1136,33 +1161,46 @@
                     <p>请确认以下配置信息无误后生成配置文件</p>
                 </div>
 
-                <div class="summary-card">
-                    <h4><i class="bi bi-shield-lock"></i> API 配置</h4>
-                    <div class="summary-item">
-                        <span class="summary-label">API Token:</span>
-                        <span class="summary-value" id="summaryApiToken">--</span>
-                    </div>
-                    <div class="summary-item">
-                        <span class="summary-label">邮箱:</span>
-                        <span class="summary-value" id="summaryApiEmail">--</span>
-                    </div>
-                    </div>
-
-                <div class="summary-card">
-                    <h4><i class="bi bi-globe2"></i> 域名配置</h4>
-                    <div class="summary-item">
-                        <span class="summary-label">主域名:</span>
-                        <span class="summary-value" id="summaryDomain">--</span>
-                    </div>
-                    <div class="summary-item">
-                        <span class="summary-label">项目标签:</span>
-                        <span class="summary-value" id="summaryProjectTag">--</span>
+                <div class="summary-card collapsible" onclick="toggleSummaryCard(this)">
+                    <h4>
+                        <i class="bi bi-shield-lock"></i> API 配置
+                        <i class="bi bi-chevron-down collapse-icon"></i>
+                    </h4>
+                    <div class="summary-content">
+                        <div class="summary-item">
+                            <span class="summary-label">API Token:</span>
+                            <span class="summary-value" id="summaryApiToken">--</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">邮箱:</span>
+                            <span class="summary-value" id="summaryApiEmail">--</span>
+                        </div>
                     </div>
                 </div>
 
-                <div class="summary-card">
-                    <h4><i class="bi bi-arrow-right-circle"></i> 转发规则</h4>
-                    <div id="summaryRules">
+                <div class="summary-card collapsible" onclick="toggleSummaryCard(this)">
+                    <h4>
+                        <i class="bi bi-globe2"></i> 域名配置
+                        <i class="bi bi-chevron-down collapse-icon"></i>
+                    </h4>
+                    <div class="summary-content">
+                        <div class="summary-item">
+                            <span class="summary-label">主域名:</span>
+                            <span class="summary-value" id="summaryDomain">--</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">项目标签:</span>
+                            <span class="summary-value" id="summaryProjectTag">--</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="summary-card collapsible" onclick="toggleSummaryCard(this)">
+                    <h4>
+                        <i class="bi bi-arrow-right-circle"></i> 转发规则
+                        <i class="bi bi-chevron-down collapse-icon"></i>
+                    </h4>
+                    <div class="summary-content" id="summaryRules">
                         <!-- 规则摘要将通过 JavaScript 动态生成 -->
                     </div>
                 </div>
@@ -1717,39 +1755,246 @@ tcp://game.example.com 192.168.1.3:9999"></textarea>
             }
         }
 
+        // 切换配置摘要卡片展开/收缩
+        function toggleSummaryCard(card) {
+            card.classList.toggle('collapsed');
+        }
+
         // 更新配置摘要
         function updateSummary() {
-            document.getElementById('summaryApiToken').textContent = state.apiConfig.token ? '••••••••' : '--';
-            document.getElementById('summaryApiEmail').textContent = state.apiConfig.email || '--';
-            document.getElementById('summaryAccountId').textContent = state.apiConfig.accountId || '--';
-            document.getElementById('summaryDomain').textContent = state.domainConfig.domain || '--';
-            document.getElementById('summaryProjectTag').textContent = state.domainConfig.projectTag || '--';
-
+            // 更新 API 配置摘要
+            const apiTokenEl = document.getElementById('summaryApiToken');
+            const apiEmailEl = document.getElementById('summaryApiEmail');
+            if (apiTokenEl) apiTokenEl.textContent = state.apiConfig.token ? '••••••••' + state.apiConfig.token.slice(-8) : '--';
+            if (apiEmailEl) apiEmailEl.textContent = state.apiConfig.email || '--';
             
+            // 更新域名配置摘要
+            const domainEl = document.getElementById('summaryDomain');
+            const projectTagEl = document.getElementById('summaryProjectTag');
+            if (domainEl) domainEl.textContent = state.domainConfig.domain || '--';
+            if (projectTagEl) projectTagEl.textContent = state.domainConfig.projectTag || '--';
+            
+            // 更新转发规则摘要
             const rulesDiv = document.getElementById('summaryRules');
+            if (!rulesDiv) return;
+            
             if (state.rules.length > 0) {
                 rulesDiv.innerHTML = state.rules.map((rule, index) => {
-                    const domain = state.domainConfig.domain;
+                    const domain = state.domainConfig.domain || 'example.com';
                     const accessUrl = rule.subdomain ? `${rule.subdomain}.${domain}:443` : `${domain}:443`;
+                    const internalAddr = rule.internalAddress || '--';
+                    const internalPort = rule.internalPort || '--';
+                    const protocol = rule.protocol || 'http';
                     return `
                         <div class="summary-item">
                             <span class="summary-label">规则 ${index + 1}:</span>
-                            <span class="summary-value">${accessUrl} → ${rule.internalAddress}:${rule.internalPort} (${rule.protocol.toUpperCase()})</span>
+                            <span class="summary-value">${accessUrl} → ${internalAddr}:${internalPort} (${protocol.toUpperCase()})</span>
                         </div>
                     `;
                 }).join('');
             } else {
-                rulesDiv.innerHTML = '<p style="color: #999;">暂无规则</p>';
+                rulesDiv.innerHTML = '<p style="color: #999; padding: 10px 0;">暂无转发规则</p>';
             }
         }
 
         // 生成配置
         function generateConfig() {
-            // 这里将生成最终的配置
-            alert('配置生成成功！\n\n' + JSON.stringify(state, null, 2));
-            
-            // 清除保存的状态
-            localStorage.removeItem('proxyGatewayState');
+            const btn = document.getElementById('btnNext');
+            const originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<div class="spinner-border spinner-border-sm me-2"></div> 正在生成配置...';
+
+            // 构建请求数据
+            const requestData = {
+                api_token: state.apiConfig.token,
+                api_email: state.apiConfig.email,
+                domain: state.domainConfig.domain,
+                project_tag: state.domainConfig.projectTag,
+                rules: state.rules
+            };
+
+            // 调用后端 API 生成配置
+            fetch('/api/generate-wizard-config', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(requestData)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    // 显示配置内容在预览区域，并弹出保存对话框
+                    showSaveConfigModal(data.data.config);
+                } else {
+                    throw new Error(data.error || '生成配置失败');
+                }
+            })
+            .catch(error => {
+                console.error('配置生成失败:', error);
+                alert('配置生成失败: ' + error.message);
+            })
+            .finally(() => {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            });
+        }
+
+        // 显示保存配置的模态框
+        function showSaveConfigModal(configContent) {
+            // 创建保存配置的模态框
+            const modalHtml = `
+                <div class="modal show" id="saveConfigModal" style="z-index: 3000;">
+                    <div class="modal-content" style="max-width: 900px;">
+                        <div class="modal-header">
+                            <h5><i class="bi bi-file-earmark-code"></i> 保存配置文件</h5>
+                            <button class="modal-close" onclick="closeSaveConfigModal()">&times;</button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <label class="form-label">配置文件名</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">/etc/tls-shunt-proxy/</span>
+                                    <input type="text" class="form-control" id="configFileName"
+                                           value="config.yaml" placeholder="输入文件名（如：my-config.yaml）">
+                                </div>
+                                <div class="form-text">文件名以 .yaml 或 .yml 结尾，如果已存在同名文件将被覆盖</div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">配置内容预览</label>
+                                <textarea class="modal-textarea" id="configPreview"
+                                          style="min-height: 300px; font-size: 11px;" readonly>${escapeHtml(configContent)}</textarea>
+                            </div>
+                            <div class="save-status" id="saveStatus" style="display: none;"></div>
+                        </div>
+                        <div class="modal-footer">
+                            <button class="btn btn-secondary" onclick="closeSaveConfigModal()">取消</button>
+                            <button class="btn btn-success" id="saveConfigBtn" onclick="saveConfigFile('${encodeURIComponent(configContent)}')">
+                                <i class="bi bi-check-lg"></i> 保存配置
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // 检查是否已存在模态框，避免重复创建
+            const existingModal = document.getElementById('saveConfigModal');
+            if (existingModal) {
+                existingModal.remove();
+            }
+
+            // 添加到页面
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+            // 确保输入框获得焦点
+            setTimeout(() => {
+                const fileNameInput = document.getElementById('configFileName');
+                if (fileNameInput) {
+                    fileNameInput.focus();
+                    fileNameInput.select();
+                }
+            }, 100);
+        }
+
+        // 关闭保存配置模态框
+        function closeSaveConfigModal() {
+            const modal = document.getElementById('saveConfigModal');
+            if (modal) {
+                modal.remove();
+            }
+        }
+
+        // 保存配置文件
+        function saveConfigFile(encodedConfig) {
+            const configFileName = document.getElementById('configFileName').value.trim();
+            const saveStatus = document.getElementById('saveStatus');
+            const saveBtn = document.getElementById('saveConfigBtn');
+
+            if (!configFileName) {
+                saveStatus.className = 'save-status error';
+                saveStatus.style.display = 'block';
+                saveStatus.innerHTML = '<i class="bi bi-exclamation-triangle-fill"></i> 请输入配置文件名';
+                saveStatus.style.background = '#ffebee';
+                saveStatus.style.color = '#c62828';
+                saveStatus.style.padding = '10px 14px';
+                saveStatus.style.borderRadius = '6px';
+                return;
+            }
+
+            // 禁用按钮，显示加载状态
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '<div class="spinner-border spinner-border-sm me-2"></div> 保存中...';
+
+            // 解码配置内容
+            const configContent = decodeURIComponent(encodedConfig);
+
+            // 调用后端 API 保存配置
+            fetch('/api/save-strategy-config', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    config: configContent,
+                    config_name: configFileName
+                })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    saveStatus.className = 'save-status success';
+                    saveStatus.style.display = 'block';
+                    saveStatus.innerHTML = '<i class="bi bi-check-circle-fill"></i> 配置保存成功！文件路径: ' + (data.data?.path || '/etc/tls-shunt-proxy/' + configFileName);
+                    saveStatus.style.background = '#e8f5e9';
+                    saveStatus.style.color = '#2e7d32';
+                    saveStatus.style.padding = '10px 14px';
+                    saveStatus.style.borderRadius = '6px';
+
+                    // 2秒后关闭模态框并重置
+                    setTimeout(() => {
+                        closeSaveConfigModal();
+                        // 清除保存的状态
+                        localStorage.removeItem('proxyGatewayState');
+                        // 重置向导状态
+                        state.currentStep = 1;
+                        updateUI();
+                        fillDefaultData();
+                    }, 2000);
+                } else {
+                    throw new Error(data.error || '保存配置失败');
+                }
+            })
+            .catch(error => {
+                console.error('保存配置失败:', error);
+                saveStatus.className = 'save-status error';
+                saveStatus.style.display = 'block';
+                saveStatus.innerHTML = '<i class="bi bi-exclamation-triangle-fill"></i> 保存失败: ' + error.message;
+                saveStatus.style.background = '#ffebee';
+                saveStatus.style.color = '#c62828';
+                saveStatus.style.padding = '10px 14px';
+                saveStatus.style.borderRadius = '6px';
+            })
+            .finally(() => {
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = '<i class="bi bi-check-lg"></i> 保存配置';
+            });
+        }
+
+        // HTML 转义函数
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
         }
 
         // 更新统计信息
