@@ -118,18 +118,29 @@ func ReadConfig(path string) (conf Config, err error) {
 			// 检查是否有通配符证书匹配
 			if vh.Cert == "" && vh.Key == "" && vh.ManagedCert {
 				if conf.WildcardManager != nil {
-					// 检查是否有通配符证书匹配此域名
-					// 注意：这里需要模拟匹配逻辑
-					// 简化处理：如果有通配符配置，就尝试使用
-					if conf.WildcardManager.GetCertificate(vh.Name) != nil {
-						useWildcard = true
-						log.Printf("域名 %s 将使用通配符证书", vh.Name)
+					// 检查是否有通配符配置匹配此域名
+					// 注意：即使通配符证书还在申请中，只要有配置就应该禁用 managedcert
+					// 避免两个 CertMagic 实例管理同一个域名导致冲突
+					conf.WildcardManager.mu.RLock()
+					for wildcard := range conf.WildcardManager.wildcards {
+						if conf.WildcardManager.matchWildcard(wildcard, vh.Name) {
+							useWildcard = true
+							log.Printf("✓ 域名 %s 匹配通配符配置 %s，将使用通配符证书（禁用 managedcert）", vh.Name, wildcard)
+							break
+						}
 					}
+					conf.WildcardManager.mu.RUnlock()
 				}
 			}
 
 			// 如果使用通配符证书，则禁用 managedcert（避免单独申请）
 			effectiveManagedCert := vh.ManagedCert && !useWildcard
+
+			if useWildcard {
+				log.Printf("✓ 域名 %s 的 managedcert 已禁用，将使用通配符证书", vh.Name)
+			} else if effectiveManagedCert {
+				log.Printf("✓ 域名 %s 将单独申请证书（managedcert=true）", vh.Name)
+			}
 
 			tlsConfig, err = getTlsConfig(effectiveManagedCert, vh.Name, vh.Cert, vh.Key, vh.KeyType, vh.Alpn, vh.Protocols, conf.WildcardManager)
 		}

@@ -254,16 +254,8 @@ func (w *WildcardManager) LoadFromConfig(configs []raw.WildcardCertConfig) error
 		}
 
 		// 创建独立的 certmagic 实例
-		certConfig := certmagic.Config{
-			Storage: &certmagic.FileStorage{Path: "./"},
-		}
-
-		// 创建 cache
-		cache := certmagic.NewCache(certmagic.CacheOptions{
-			GetConfigForCert: func(certmagic.Certificate) (*certmagic.Config, error) {
-				return &certConfig, nil
-			},
-		})
+		// 注意：必须先完全初始化 certConfig，再创建 cache 和 magic
+		// 避免 GetConfigForCert 闭包捕获未完成初始化的配置指针
 
 		// 获取主 CA
 		primaryCA := wc.CAProvider
@@ -273,6 +265,11 @@ func (w *WildcardManager) LoadFromConfig(configs []raw.WildcardCertConfig) error
 
 		// 获取 Email（配置验证阶段已检查 ZeroSSL 必须有邮箱）
 		email := wc.Email
+
+		// 先创建 certConfig（NewACMEIssuer 需要一个有效的 Config）
+		certConfig := certmagic.Config{
+			Storage: &certmagic.FileStorage{Path: "./"},
+		}
 
 		// 创建主 CA Issuer
 		primaryIssuer := certmagic.NewACMEIssuer(&certConfig, certmagic.ACMEIssuer{
@@ -327,10 +324,25 @@ func (w *WildcardManager) LoadFromConfig(configs []raw.WildcardCertConfig) error
 				wc.Domain, primaryCA)
 		}
 
+		// 设置 Issuers
 		certConfig.Issuers = issuers
 
+		// 创建 cache 和 magic
+		// GetConfigForCert 使用 certmagic.Default 作为 fallback，确保永远不会返回 nil
+		// 解决循环依赖问题：闭包引用的 magic 变量在 certmagic.New() 执行期间可能为 nil
+		var magic *certmagic.Config
+		cache := certmagic.NewCache(certmagic.CacheOptions{
+			GetConfigForCert: func(certmagic.Certificate) (*certmagic.Config, error) {
+				if magic != nil {
+					return magic, nil
+				}
+				// fallback 到 certmagic.Default，确保永远不会返回 nil
+				return &certmagic.Default, nil
+			},
+		})
+
 		// 创建独立的 certmagic 实例
-		magic := certmagic.New(cache, certConfig)
+		magic = certmagic.New(cache, certConfig)
 		w.magicMap[wc.Domain] = magic
 
 		log.Printf("✓ 为通配符域名 '%s' 创建独立的 certmagic 实例", wc.Domain)

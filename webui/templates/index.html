@@ -1850,7 +1850,12 @@ tcp://game.example.com 192.168.1.3:9999"></textarea>
         }
 
         // 显示保存配置的模态框
+        let pendingConfigContent = ''; // 存储待保存的配置内容
+        
         function showSaveConfigModal(configContent) {
+            // 将配置内容存储在全局变量中
+            pendingConfigContent = configContent;
+            
             // 创建保存配置的模态框
             const modalHtml = `
                 <div class="modal show" id="saveConfigModal" style="z-index: 3000;">
@@ -1878,7 +1883,7 @@ tcp://game.example.com 192.168.1.3:9999"></textarea>
                         </div>
                         <div class="modal-footer">
                             <button class="btn btn-secondary" onclick="closeSaveConfigModal()">取消</button>
-                            <button class="btn btn-success" id="saveConfigBtn" onclick="saveConfigFile('${encodeURIComponent(configContent)}')">
+                            <button class="btn btn-success" id="saveConfigBtn" onclick="saveConfigFile()">
                                 <i class="bi bi-check-lg"></i> 保存配置
                             </button>
                         </div>
@@ -1911,10 +1916,12 @@ tcp://game.example.com 192.168.1.3:9999"></textarea>
             if (modal) {
                 modal.remove();
             }
+            // 清空待保存的配置
+            pendingConfigContent = '';
         }
 
         // 保存配置文件
-        function saveConfigFile(encodedConfig) {
+        function saveConfigFile() {
             const configFileName = document.getElementById('configFileName').value.trim();
             const saveStatus = document.getElementById('saveStatus');
             const saveBtn = document.getElementById('saveConfigBtn');
@@ -1924,7 +1931,7 @@ tcp://game.example.com 192.168.1.3:9999"></textarea>
                 saveStatus.style.display = 'block';
                 saveStatus.innerHTML = '<i class="bi bi-exclamation-triangle-fill"></i> 请输入配置文件名';
                 saveStatus.style.background = '#ffebee';
-                saveStatus.style.color = '#c62828';
+                saveStatus.style.color = '#c2828';
                 saveStatus.style.padding = '10px 14px';
                 saveStatus.style.borderRadius = '6px';
                 return;
@@ -1934,8 +1941,10 @@ tcp://game.example.com 192.168.1.3:9999"></textarea>
             saveBtn.disabled = true;
             saveBtn.innerHTML = '<div class="spinner-border spinner-border-sm me-2"></div> 保存中...';
 
-            // 解码配置内容
-            const configContent = decodeURIComponent(encodedConfig);
+            console.log('开始保存配置:', {
+                fileName: configFileName,
+                configLength: pendingConfigContent.length
+            });
 
             // 调用后端 API 保存配置
             fetch('/api/save-strategy-config', {
@@ -1944,17 +1953,19 @@ tcp://game.example.com 192.168.1.3:9999"></textarea>
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    config: configContent,
+                    config: pendingConfigContent,
                     config_name: configFileName
                 })
             })
             .then(response => {
+                console.log('保存配置响应状态:', response.status);
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
                 return response.json();
             })
             .then(data => {
+                console.log('保存配置响应数据:', data);
                 if (data.success) {
                     saveStatus.className = 'save-status success';
                     saveStatus.style.display = 'block';
@@ -1984,7 +1995,7 @@ tcp://game.example.com 192.168.1.3:9999"></textarea>
                 saveStatus.style.display = 'block';
                 saveStatus.innerHTML = '<i class="bi bi-exclamation-triangle-fill"></i> 保存失败: ' + error.message;
                 saveStatus.style.background = '#ffebee';
-                saveStatus.style.color = '#c62828';
+                saveStatus.style.color = '#c2828';
                 saveStatus.style.padding = '10px 14px';
                 saveStatus.style.borderRadius = '6px';
             })
