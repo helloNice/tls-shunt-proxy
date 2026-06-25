@@ -579,7 +579,7 @@ func Start(configPath string, reloadMgr interface{}) {
 	// 创建带安全头的处理器链
 	handler := securityHeadersMiddleware(basicAuthMiddleware(mux))
 
-	bind := "127.0.0.1:8080"
+	bind := "127.0.0.1:9080"
 	log.Println("web 管理界面启动，访问 http://" + bind + " （默认账户 admin/admin，如已在环境中设置 WEBUI_USER/WEBUI_PASS 则使用设置的）")
 	go func() {
 		// 启用 HTTP/2 支持
@@ -657,7 +657,7 @@ func generateConfigFromWizard(formData *raw.WizardFormData) *raw.ConfigTemplate 
 		InboundBufferSize:  4,
 		OutboundBufferSize: 32,
 		Fallback:           "127.0.0.1:8443",
-		WebUIListen:        "127.0.0.1:8080",
+		WebUIListen:        "127.0.0.1:9080",
 		VHosts:             []raw.RawVHost{},
 	}
 
