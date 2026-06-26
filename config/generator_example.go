@@ -13,9 +13,9 @@ func ExampleUsage() {
 	request := NewConfigRequestBuilder().
 		SetDomain("hynjhaiwk.com").
 		SetCloudflareToken("your-cloudflare-api-token").
-		AddHTTPService("web", 8080).
-		AddTCPService("api", 8443).
-		AddWebSocketService("ws", 8443).
+		AddHTTPService("web", "127.0.0.1", 8080).
+		AddTCPService("api", "127.0.0.1", 8443).
+		AddWebSocketService("ws", "127.0.0.1", 8443).
 		Build()
 
 	// 生成配置
@@ -37,9 +37,9 @@ func ExampleFromWebData() {
 		Domain:          "mysite.com",
 		CloudflareToken: "abc123xyz",
 		Services: []ServiceConfig{
-			{Subdomain: "web", Type: "http", BackendPort: 8080},
-			{Subdomain: "api", Type: "tcp", BackendPort: 9000},
-			{Subdomain: "ws", Type: "websocket", BackendPort: 9090},
+			{Subdomain: "web", Type: "http", BackendAddress: "127.0.0.1", BackendPort: 8080},
+			{Subdomain: "api", Type: "tcp", BackendAddress: "127.0.0.1", BackendPort: 9000},
+			{Subdomain: "ws", Type: "websocket", BackendAddress: "127.0.0.1", BackendPort: 9090},
 		},
 	}
 
@@ -71,7 +71,7 @@ func ExampleCustomHTTPStrategy() {
 		CloudflareToken: "token",
 	}
 
-	config, err := customStrategy.Generate(ctx, "web", 8080)
+	config, err := customStrategy.Generate(ctx, "web", "127.0.0.1", 8080)
 	if err != nil {
 		log.Fatalf("生成配置失败: %v", err)
 	}
@@ -87,9 +87,9 @@ func ExampleMultipleHTTPServices() {
 	request := NewConfigRequestBuilder().
 		SetDomain("example.com").
 		SetCloudflareToken("custom-token").
-		AddHTTPService("blog", 3000).
-		AddHTTPService("shop", 3001).
-		AddHTTPService("admin", 3002).
+		AddHTTPService("blog", "127.0.0.1", 3000).
+		AddHTTPService("shop", "127.0.0.1", 3001).
+		AddHTTPService("admin", "127.0.0.1", 3002).
 		Build()
 
 	config, err := GenerateFullConfig(request)
@@ -108,7 +108,7 @@ func ExampleMinimalConfig() {
 	request := NewConfigRequestBuilder().
 		SetDomain("simple.com").
 		SetCloudflareToken("token").
-		AddHTTPService("www", 8080).
+		AddHTTPService("www", "127.0.0.1", 8080).
 		Build()
 
 	config, err := GenerateFullConfig(request)

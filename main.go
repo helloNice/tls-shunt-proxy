@@ -262,7 +262,10 @@ func listenAndServe() {
 func handle(conn net.Conn) {
 	serverName, sniConn, err := sni.ServerNameFromConn(conn)
 	if err != nil {
+		log.Printf("[DEBUG] SNI 解析失败: 来源=%s，错误=%v\n", conn.RemoteAddr().String(), err)
+		log.Printf("[DEBUG] 处理失败原因: 无法解析 TLS SNI 扩展，可能不是有效的 TLS 连接\n")
 		if conf.Fallback != handler.NoopHandler {
+			log.Printf("[DEBUG] 使用 Fallback 处理器处理未识别 SNI 的连接\n")
 			conf.Fallback.Handle(sniConn)
 		} else {
 			log.Printf("fail to obtain server name: %v\n", err)
@@ -271,13 +274,17 @@ func handle(conn net.Conn) {
 		return
 	}
 
+	log.Printf("[DEBUG] 收到 SNI 请求: 域名=%s，来源=%s\n", serverName, conn.RemoteAddr().String())
 	handleWithServerName(sniConn, serverName)
 }
 
 func handleWithServerName(conn net.Conn, serverName string) {
 	vh, has := conf.VHosts[strings.ToLower(serverName)]
 	if !has {
+		log.Printf("[DEBUG] 域名 %s 未找到匹配的虚拟主机配置，使用 Fallback 处理器\n", serverName)
+		log.Printf("[DEBUG] 处理失败原因: 配置文件中未找到该域名的虚拟主机配置\n")
 		if conf.Fallback != handler.NoopHandler {
+			log.Printf("[DEBUG] 使用 Fallback 处理器处理未识别 SNI 的连接\n")
 			conf.Fallback.Handle(conn)
 		} else {
 			log.Printf("no available vhost for %s\n", serverName)
@@ -286,22 +293,30 @@ func handleWithServerName(conn net.Conn, serverName string) {
 		return
 	}
 
+	log.Printf("[DEBUG] 域名 %s 匹配虚拟主机配置\n", serverName)
+
 	if vh.TlsConfig != nil {
 		tlsConn := tlsOffloading(conn, vh.TlsConfig)
-		
+
 		// 进行 TLS 握手以获取 ALPN 协商结果
 		if err := tlsConn.Handshake(); err != nil {
+			log.Printf("[DEBUG] 域名 %s TLS 握手失败: %v\n", serverName, err)
+			log.Printf("[DEBUG] 处理失败原因: TLS 握手失败，可能原因：证书不匹配、加密套件不兼容、客户端终止连接\n")
 			log.Printf("TLS handshake failed for %s: %v\n", serverName, err)
 			return
 		}
-		
+
+		log.Printf("[DEBUG] 域名 %s TLS 握手成功\n", serverName)
+
 		// 检查 ALPN 协商结果
 		negotiatedProtocol := tlsConn.ConnectionState().NegotiatedProtocol
 		if negotiatedProtocol == "h2" {
 			// HTTP/2 通过 ALPN 协商成功
+			log.Printf("[DEBUG] 域名 %s 协商协议: HTTP/2 (ALPN)\n", serverName)
 			log.Printf("HTTP/2 negotiated for %s via ALPN\n", serverName)
 			if vh.Http2 != handler.NoopHandler {
 				// 如果配置了 Http2 处理器，使用它
+				log.Printf("[DEBUG] 域名 %s 使用 Http2 处理器\n", serverName)
 				vh.Http2.Handle(tlsConn)
 				return
 			}
@@ -309,34 +324,50 @@ func handleWithServerName(conn net.Conn, serverName string) {
 			// 这样可以让 HTTP 流量被正确路由到 Http 处理器
 			log.Printf("No Http2 handler configured for %s, using sniffer to detect traffic type\n", serverName)
 		}
-		
+
 		// HTTP/1.1 或 HTTP/2（无 Http2 处理器时），继续使用嗅探
 		sniffConn := sniffer.NewPeekPreDataConn(tlsConn)
 		conn = sniffConn
 
+		trafficType := ""
 		switch sniffConn.Type {
 		case sniffer.TypeHttp:
-			if handleHttp(sniffConn, vh) {
+			trafficType = "HTTP"
+			log.Printf("[DEBUG] 域名 %s 检测到流量类型: HTTP，路径: %s\n", serverName, sniffConn.GetPath())
+			if handleHttp(sniffConn, vh, serverName) {
 				return
 			}
 		case sniffer.TypeHttp2:
-			if handleHttp2(sniffConn, vh) {
+			trafficType = "HTTP/2"
+			log.Printf("[DEBUG] 域名 %s 检测到流量类型: HTTP/2\n", serverName)
+			if handleHttp2(sniffConn, vh, serverName) {
 				return
 			}
 		case sniffer.TypeTrojan:
-			if handleTrojan(sniffConn, vh) {
+			trafficType = "Trojan"
+			log.Printf("[DEBUG] 域名 %s 检测到流量类型: Trojan\n", serverName)
+			if handleTrojan(sniffConn, vh, serverName) {
 				return
 			}
+		default:
+			trafficType = "Unknown"
+			log.Printf("[DEBUG] 域名 %s 检测到流量类型: 未知\n", serverName)
+			log.Printf("[DEBUG] 处理失败原因: 无法识别流量类型，数据格式不符合已知协议\n")
 		}
-		vh.Default.Handle(tlsConn)
+		log.Printf("[DEBUG] 域名 %s 使用 Default 处理器处理 %s 流量\n", serverName, trafficType)
+		vh.Default.Handle(sniffConn)
 	} else {
+		log.Printf("[DEBUG] 域名 %s 未启用 TLS 卸载，使用 Default 处理器\n", serverName)
 		vh.Default.Handle(conn)
 	}
 }
 
-func handleHttp(conn *sniffer.SniffConn, vh config.VHost) bool {
+func handleHttp(conn *sniffer.SniffConn, vh config.VHost, serverName string) bool {
+	path := conn.GetPath()
 	for _, p := range vh.PathHandlers {
-		if strings.HasPrefix(conn.GetPath(), p.Path) {
+		if strings.HasPrefix(path, p.Path) {
+			log.Printf("[DEBUG] HTTP 请求路径匹配: 域名=%s，路径=%s -> 匹配规则=%s，处理器类型: PathHandler\n",
+				serverName, path, p.Path)
 			conn.SetPath(strings.TrimPrefix(conn.GetPath(), p.TrimPrefix))
 			p.Handler.Handle(conn)
 			return true
@@ -344,26 +375,33 @@ func handleHttp(conn *sniffer.SniffConn, vh config.VHost) bool {
 	}
 
 	if vh.Http != handler.NoopHandler {
+		log.Printf("[DEBUG] HTTP 请求使用 Http 处理器，域名: %s，路径: %s\n", serverName, path)
 		vh.Http.Handle(conn)
 		return true
 	}
 
+	log.Printf("[DEBUG] HTTP 请求未匹配任何处理器，域名: %s，路径: %s\n", serverName, path)
+	log.Printf("[DEBUG] 处理失败原因: 未找到匹配的路径处理器，且未配置默认 Http 处理器\n")
 	return false
 }
 
-func handleHttp2(conn *sniffer.SniffConn, vh config.VHost) bool {
+func handleHttp2(conn *sniffer.SniffConn, vh config.VHost, serverName string) bool {
 	if vh.Http2 != handler.NoopHandler {
+		log.Printf("[DEBUG] HTTP/2 请求使用 Http2 处理器，域名: %s\n", serverName)
 		vh.Http2.Handle(conn)
 		return true
 	}
-	return handleHttp(conn, vh)
+	log.Printf("[DEBUG] HTTP/2 请求未配置 Http2 处理器，尝试使用 Http 处理器，域名: %s\n", serverName)
+	return handleHttp(conn, vh, serverName)
 }
 
-func handleTrojan(conn *sniffer.SniffConn, vh config.VHost) bool {
+func handleTrojan(conn *sniffer.SniffConn, vh config.VHost, serverName string) bool {
 	if vh.Trojan != handler.NoopHandler {
+		log.Printf("[DEBUG] Trojan 请求使用 Trojan 处理器，域名: %s\n", serverName)
 		vh.Trojan.Handle(conn)
 		return true
 	}
+	log.Printf("[DEBUG] Trojan 请求未配置 Trojan 处理器，域名: %s\n", serverName)
 	return false
 }
 

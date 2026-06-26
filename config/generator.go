@@ -22,9 +22,10 @@ type ConfigStrategy interface {
 
 // ServiceConfig 服务配置
 type ServiceConfig struct {
-	Subdomain   string `json:"subdomain"`   // 子域名
-	Type        string `json:"type"`        // 服务类型: http, websocket, tcp
-	BackendPort int    `json:"backend_port"` // 后端端口
+	Subdomain      string `json:"subdomain"`       // 子域名
+	Type           string `json:"type"`            // 服务类型: http, websocket, tcp
+	BackendAddress string `json:"backend_address"` // 后端地址
+	BackendPort    int    `json:"backend_port"`    // 后端端口
 }
 
 // ConfigRequest 配置请求
@@ -148,7 +149,7 @@ type HTTPProxyStrategy struct {
 	BaseVHostStrategy
 }
 
-func (s *HTTPProxyStrategy) Generate(ctx *ConfigContext, subdomain string, backendPort int) (string, error) {
+func (s *HTTPProxyStrategy) Generate(ctx *ConfigContext, subdomain string, backendAddress string, backendPort int) (string, error) {
 	if subdomain == "" {
 		return "", fmt.Errorf("subdomain is required")
 	}
@@ -158,7 +159,7 @@ func (s *HTTPProxyStrategy) Generate(ctx *ConfigContext, subdomain string, backe
 	config += fmt.Sprintf(`
     http:
       handler: proxyPass
-      args: 127.0.0.1:%d`, backendPort)
+      args: %s:%d`, backendAddress, backendPort)
 
 	return config, nil
 }
@@ -172,7 +173,7 @@ type WebSocketStrategy struct {
 	BaseVHostStrategy
 }
 
-func (s *WebSocketStrategy) Generate(ctx *ConfigContext, subdomain string, backendPort int) (string, error) {
+func (s *WebSocketStrategy) Generate(ctx *ConfigContext, subdomain string, backendAddress string, backendPort int) (string, error) {
 	if subdomain == "" {
 		return "", fmt.Errorf("subdomain is required")
 	}
@@ -182,7 +183,7 @@ func (s *WebSocketStrategy) Generate(ctx *ConfigContext, subdomain string, backe
 	config += fmt.Sprintf(`
     default:
       handler: proxyPass
-      args: 127.0.0.1:%d`, backendPort)
+      args: %s:%d`, backendAddress, backendPort)
 
 	return config, nil
 }
@@ -196,7 +197,7 @@ type TCPProxyStrategy struct {
 	BaseVHostStrategy
 }
 
-func (s *TCPProxyStrategy) Generate(ctx *ConfigContext, subdomain string, backendPort int) (string, error) {
+func (s *TCPProxyStrategy) Generate(ctx *ConfigContext, subdomain string, backendAddress string, backendPort int) (string, error) {
 	if subdomain == "" {
 		return "", fmt.Errorf("subdomain is required")
 	}
@@ -206,7 +207,7 @@ func (s *TCPProxyStrategy) Generate(ctx *ConfigContext, subdomain string, backen
 	config += fmt.Sprintf(`
     default:
       handler: proxyPass
-      args: 127.0.0.1:%d`, backendPort)
+      args: %s:%d`, backendAddress, backendPort)
 
 	return config, nil
 }
@@ -288,13 +289,19 @@ func GenerateFullConfig(request *ConfigRequest) (string, error) {
 		var vhostConfig string
 		var err error
 
+		// 如果没有指定后端地址，使用默认的 127.0.0.1
+		backendAddress := service.BackendAddress
+		if backendAddress == "" {
+			backendAddress = "127.0.0.1"
+		}
+
 		switch service.Type {
 		case "http":
-			vhostConfig, err = httpStrategy.Generate(ctx, service.Subdomain, service.BackendPort)
+			vhostConfig, err = httpStrategy.Generate(ctx, service.Subdomain, backendAddress, service.BackendPort)
 		case "websocket":
-			vhostConfig, err = websocketStrategy.Generate(ctx, service.Subdomain, service.BackendPort)
+			vhostConfig, err = websocketStrategy.Generate(ctx, service.Subdomain, backendAddress, service.BackendPort)
 		case "tcp":
-			vhostConfig, err = tcpStrategy.Generate(ctx, service.Subdomain, service.BackendPort)
+			vhostConfig, err = tcpStrategy.Generate(ctx, service.Subdomain, backendAddress, service.BackendPort)
 		default:
 			continue
 		}
@@ -339,31 +346,34 @@ func (b *ConfigRequestBuilder) SetCloudflareToken(token string) *ConfigRequestBu
 }
 
 // AddHTTPService 添加HTTP服务
-func (b *ConfigRequestBuilder) AddHTTPService(subdomain string, backendPort int) *ConfigRequestBuilder {
+func (b *ConfigRequestBuilder) AddHTTPService(subdomain string, backendAddress string, backendPort int) *ConfigRequestBuilder {
 	b.services = append(b.services, ServiceConfig{
-		Subdomain:   subdomain,
-		Type:        "http",
-		BackendPort: backendPort,
+		Subdomain:      subdomain,
+		Type:           "http",
+		BackendAddress: backendAddress,
+		BackendPort:    backendPort,
 	})
 	return b
 }
 
 // AddWebSocketService 添加WebSocket服务
-func (b *ConfigRequestBuilder) AddWebSocketService(subdomain string, backendPort int) *ConfigRequestBuilder {
+func (b *ConfigRequestBuilder) AddWebSocketService(subdomain string, backendAddress string, backendPort int) *ConfigRequestBuilder {
 	b.services = append(b.services, ServiceConfig{
-		Subdomain:   subdomain,
-		Type:        "websocket",
-		BackendPort: backendPort,
+		Subdomain:      subdomain,
+		Type:           "websocket",
+		BackendAddress: backendAddress,
+		BackendPort:    backendPort,
 	})
 	return b
 }
 
 // AddTCPService 添加TCP服务
-func (b *ConfigRequestBuilder) AddTCPService(subdomain string, backendPort int) *ConfigRequestBuilder {
+func (b *ConfigRequestBuilder) AddTCPService(subdomain string, backendAddress string, backendPort int) *ConfigRequestBuilder {
 	b.services = append(b.services, ServiceConfig{
-		Subdomain:   subdomain,
-		Type:        "tcp",
-		BackendPort: backendPort,
+		Subdomain:      subdomain,
+		Type:           "tcp",
+		BackendAddress: backendAddress,
+		BackendPort:    backendPort,
 	})
 	return b
 }

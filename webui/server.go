@@ -230,21 +230,24 @@ func Start(configPath string, reloadMgr interface{}) {
 			switch protocol {
 			case "http", "https":
 				configRequest.Services = append(configRequest.Services, config.ServiceConfig{
-					Subdomain:   subdomain,
-					Type:        "http",
-					BackendPort: port,
+					Subdomain:      subdomain,
+					Type:           "http",
+					BackendAddress: internalAddress,
+					BackendPort:    port,
 				})
 			case "ws", "wss":
 				configRequest.Services = append(configRequest.Services, config.ServiceConfig{
-					Subdomain:   subdomain,
-					Type:        "websocket",
-					BackendPort: port,
+					Subdomain:      subdomain,
+					Type:           "websocket",
+					BackendAddress: internalAddress,
+					BackendPort:    port,
 				})
 			case "tcp":
 				configRequest.Services = append(configRequest.Services, config.ServiceConfig{
-					Subdomain:   subdomain,
-					Type:        "tcp",
-					BackendPort: port,
+					Subdomain:      subdomain,
+					Type:           "tcp",
+					BackendAddress: internalAddress,
+					BackendPort:    port,
 				})
 			}
 		}
