@@ -1,0 +1,2107 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Proxy Gateway - 配置向导</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="/static/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="/static/fonts/bootstrap-icons.css">
+    <!-- Animate.css -->
+    <link rel="stylesheet" href="/static/css/animate.min.css">
+    <style>
+        :root {
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --secondary-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            --success-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            --bg-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --card-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+            --transition-speed: 0.3s;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+            background: var(--bg-gradient);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* 导航栏 */
+        .navbar {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 12px 24px;
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .navbar-brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .navbar-brand h1 {
+            color: #333;
+            font-size: 20px;
+            font-weight: 700;
+            margin: 0;
+            background: var(--primary-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .navbar-brand i {
+            font-size: 26px;
+            background: var(--primary-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .nav-stats {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .stat-item {
+            background: #f8f9fa;
+            padding: 6px 12px;
+            border-radius: 16px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #666;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .stat-item i {
+            color: #667eea;
+        }
+
+        /* 主内容区域 */
+        .main-container {
+            flex: 1;
+            padding: 16px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+        .wizard-card {
+            width: 100%;
+            max-width: 1400px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: var(--card-shadow);
+            padding: 24px;
+            animation: fadeInUp 0.6s ease;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* 步骤指示器 */
+        .stepper {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 24px;
+            position: relative;
+            padding: 0 12px;
+        }
+
+        .stepper::before {
+            content: '';
+            position: absolute;
+            top: 22px;
+            left: 44px;
+            right: 44px;
+            height: 2px;
+            background: #e0e0e0;
+            z-index: 1;
+        }
+
+        .stepper-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            z-index: 2;
+            flex: 1;
+        }
+
+        .stepper-circle {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: #e0e0e0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            font-weight: 700;
+            color: #999;
+            margin-bottom: 6px;
+            transition: all var(--transition-speed);
+            border: 2px solid white;
+        }
+
+        .stepper-item.active .stepper-circle {
+            background: var(--primary-gradient);
+            color: white;
+            transform: scale(1.05);
+            box-shadow: 0 4px 16px rgba(102, 126, 234, 0.4);
+        }
+
+        .stepper-item.completed .stepper-circle {
+            background: #4caf50;
+            color: white;
+        }
+
+        .stepper-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: #999;
+            text-align: center;
+            transition: color var(--transition-speed);
+        }
+
+        .stepper-item.active .stepper-label {
+            color: #667eea;
+        }
+
+        .stepper-item.completed .stepper-label {
+            color: #4caf50;
+        }
+
+        /* 步骤内容 */
+        .step-content {
+            display: none;
+            animation: fadeIn 0.4s ease;
+        }
+
+        .step-content.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .step-header {
+            text-align: center;
+            margin-bottom: 16px;
+        }
+
+        .step-header h2 {
+            font-size: 24px;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 6px;
+        }
+
+        .step-header p {
+            font-size: 13px;
+            color: #666;
+        }
+
+        /* 表单样式 */
+        .form-section {
+            margin-bottom: 16px;
+        }
+
+        .form-section-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .form-section-title i {
+            color: #667eea;
+        }
+
+        .form-label {
+            font-weight: 600;
+            color: #333;
+            font-size: 13px;
+            margin-bottom: 6px;
+        }
+
+        .form-control {
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 12px 14px;
+            font-size: 14px;
+            transition: all var(--transition-speed);
+        }
+
+        .form-control:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+        }
+
+        .form-text {
+            color: #666;
+            font-size: 12px;
+            margin-top: 4px;
+        }
+
+        /* API 配置卡片 */
+        .api-config-card {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 18px;
+            margin-bottom: 16px;
+        }
+
+        .connection-status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 14px;
+            border-radius: 8px;
+            margin-top: 12px;
+            font-weight: 600;
+            font-size: 12px;
+        }
+
+        .connection-status.testing {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+
+        .connection-status.success {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .connection-status.error {
+            background: #ffebee;
+            color: #c62828;
+        }
+
+        /* 域名配置卡片 */
+        .domain-config-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .domain-preview {
+            background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
+            border: 2px dashed #667eea;
+            border-radius: 8px;
+            padding: 16px;
+            text-align: center;
+        }
+
+        .domain-preview h4 {
+            color: #667eea;
+            margin-bottom: 4px;
+            font-size: 15px;
+        }
+
+        .domain-preview .preview-url {
+            font-size: 15px;
+            font-weight: 700;
+            color: #333;
+            background: white;
+            padding: 8px 14px;
+            border-radius: 6px;
+            display: inline-block;
+            margin-top: 8px;
+        }
+
+        /* 架构选择卡片 */
+        .architecture-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+            margin-bottom: 18px;
+        }
+
+        .architecture-card {
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            padding: 18px;
+            cursor: pointer;
+            transition: all var(--transition-speed);
+            background: white;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .architecture-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: var(--primary-gradient);
+            opacity: 0;
+            transition: opacity var(--transition-speed);
+        }
+
+        .architecture-card:hover {
+            border-color: #667eea;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 24px rgba(102, 126, 234, 0.2);
+        }
+
+        .architecture-card.selected {
+            border-color: #667eea;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
+        }
+
+        .architecture-card.selected::before {
+            opacity: 1;
+        }
+
+        .architecture-card .icon {
+            font-size: 48px;
+            margin-bottom: 12px;
+            display: block;
+        }
+
+        .architecture-card h3 {
+            font-size: 18px;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .architecture-card p {
+            color: #666;
+            font-size: 12px;
+            line-height: 1.4;
+            margin-bottom: 10px;
+        }
+
+        .architecture-card .features {
+            list-style: none;
+            padding: 0;
+            margin-top: 12px;
+        }
+
+        .architecture-card .features li {
+            color: #666;
+            font-size: 11px;
+            padding: 4px 0;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .architecture-card .features li i {
+            color: #4caf50;
+        }
+
+        .architecture-diagram {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 12px;
+            margin-top: 12px;
+            text-align: center;
+        }
+
+        .architecture-diagram h5 {
+            color: #666;
+            margin-bottom: 10px;
+            font-weight: 600;
+            font-size: 12px;
+        }
+
+        /* 转发规则表格 */
+        .rules-toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .rules-toolbar h4 {
+            margin: 0;
+            color: #333;
+            font-size: 15px;
+            font-weight: 700;
+        }
+
+        .rules-table {
+            border-collapse: separate;
+            border-spacing: 0;
+            width: 100%;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+
+        .rules-table thead {
+            background: var(--primary-gradient);
+            color: white;
+        }
+
+        .rules-table th {
+            padding: 10px;
+            font-weight: 600;
+            font-size: 12px;
+            text-align: left;
+        }
+
+        .rules-table td {
+            padding: 10px 8px;
+            border-bottom: 1px solid #e0e0e0;
+            vertical-align: middle;
+        }
+
+        .rules-table tbody tr:hover {
+            background: #f8f9fa;
+        }
+
+        .protocol-selector {
+            display: flex;
+            gap: 5px;
+        }
+
+        .protocol-option {
+            display: flex;
+            align-items: center;
+            gap: 3px;
+            cursor: pointer;
+            padding: 3px 8px;
+            border-radius: 4px;
+            transition: all var(--transition-speed);
+            font-size: 11px;
+        }
+
+        .protocol-option:hover {
+            background: #f0f0f0;
+        }
+
+        .protocol-option.active {
+            background: rgba(102, 126, 234, 0.1);
+            color: #667eea;
+        }
+
+        .protocol-option input[type="radio"] {
+            accent-color: #667eea;
+        }
+
+        .preview-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 600;
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+
+        .btn-delete {
+            background: #ffebee;
+            color: #c62828;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all var(--transition-speed);
+        }
+
+        .btn-delete:hover {
+            background: #ffcdd2;
+        }
+
+        /* 文本导入模态框 */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all var(--transition-speed);
+        }
+
+        .modal.show {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 760px;
+            max-height: 85vh;
+            overflow-y: auto;
+            transform: scale(0.9);
+            transition: transform var(--transition-speed);
+        }
+
+        .modal.show .modal-content {
+            transform: scale(1);
+        }
+
+        .modal-header {
+            padding: 18px 24px;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h5 {
+            margin: 0;
+            font-size: 18px;
+            font-weight: 700;
+            color: #333;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            color: #999;
+            transition: color var(--transition-speed);
+        }
+
+        .modal-close:hover {
+            color: #333;
+        }
+
+        .modal-body {
+            padding: 24px;
+        }
+
+        .modal-textarea {
+            width: 100%;
+            min-height: 260px;
+            padding: 14px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            line-height: 1.5;
+            resize: vertical;
+            transition: all var(--transition-speed);
+        }
+
+        .modal-textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+        }
+
+        .modal-footer {
+            padding: 18px 24px;
+            border-top: 1px solid #e0e0e0;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        .import-status {
+            margin-top: 12px;
+            padding: 10px 14px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            display: none;
+        }
+
+        .import-status.success {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .import-status.error {
+            background: #ffebee;
+            color: #c62828;
+        }
+
+        /* 配置摘要卡片 */
+        .summary-card {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 18px;
+            margin-bottom: 18px;
+        }
+
+        .summary-card.collapsible {
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .summary-card.collapsible h4 {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .summary-card.collapsible .collapse-icon {
+            transition: transform 0.3s ease;
+            font-size: 14px;
+            color: #666;
+        }
+
+        .summary-card.collapsed .collapse-icon {
+            transform: rotate(-90deg);
+        }
+
+        .summary-card.collapsed .summary-content {
+            display: none;
+        }
+
+        .summary-card h4 {
+            color: #333;
+            margin-bottom: 12px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .summary-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .summary-item:last-child {
+            border-bottom: none;
+        }
+
+        .summary-label {
+            color: #666;
+            font-weight: 600;
+        }
+
+        .summary-value {
+            color: #333;
+            font-weight: 600;
+        }
+
+        /* 底部按钮 */
+        .wizard-footer {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 30px;
+            padding-top: 24px;
+            border-top: 2px solid #e0e0e0;
+        }
+
+        .btn {
+            padding: 12px 28px;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: all var(--transition-speed);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-primary {
+            background: var(--primary-gradient);
+            color: white;
+            box-shadow: 0 4px 16px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 24px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+        }
+
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
+            color: white;
+            box-shadow: 0 4px 16px rgba(76, 175, 80, 0.3);
+        }
+
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 24px rgba(76, 175, 80, 0.4);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        /* 协议说明区域 */
+        .protocol-info {
+            background: #e3f2fd;
+            border-left: 3px solid #2196f3;
+            padding: 12px 16px;
+            border-radius: 6px;
+            margin-top: 18px;
+        }
+
+        .protocol-info h5 {
+            color: #1976d2;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .protocol-info p {
+            color: #0d47a1;
+            font-size: 13px;
+            margin: 0;
+            line-height: 1.5;
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 992px) {
+            .wizard-card {
+                padding: 32px;
+            }
+
+            .domain-config-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .architecture-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .stepper {
+                padding: 0 8px;
+            }
+
+            .stepper::before {
+                left: 40px;
+                right: 40px;
+            }
+
+            .stepper-circle {
+                width: 50px;
+                height: 50px;
+                font-size: 16px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .navbar {
+                padding: 12px 20px;
+            }
+
+            .navbar-brand h1 {
+                font-size: 18px;
+            }
+
+            .main-container {
+                padding: 16px;
+            }
+
+            .wizard-card {
+                padding: 24px;
+                border-radius: 16px;
+            }
+
+            .step-header h2 {
+                font-size: 24px;
+            }
+
+            .wizard-footer {
+                flex-direction: column-reverse;
+                gap: 12px;
+            }
+
+            .wizard-footer .btn {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .rules-table {
+                font-size: 13px;
+            }
+
+            .rules-table th,
+            .rules-table td {
+                padding: 12px 8px;
+            }
+
+            .stepper {
+                flex-direction: column;
+                gap: 16px;
+            }
+
+            .stepper::before {
+                display: none;
+            }
+
+            .stepper-item {
+                flex-direction: row;
+                justify-content: center;
+                gap: 12px;
+            }
+
+            .stepper-circle {
+                margin-bottom: 0;
+            }
+        }
+
+        /* 加载动画 */
+        .spinner-border {
+            width: 20px;
+            height: 20px;
+            border-width: 2px;
+        }
+
+        /* 提示信息 */
+        .alert {
+            border-radius: 8px;
+            border: none;
+            padding: 12px 16px;
+            font-weight: 500;
+            font-size: 13px;
+        }
+
+        .alert-info {
+            background: linear-gradient(135deg, #e3f2fd 0%, #f0f7ff 100%);
+            color: #1976d2;
+        }
+
+        .alert-success {
+            background: linear-gradient(135deg, #e8f5e9 0%, #f1f8f4 100%);
+            color: #2e7d32;
+        }
+
+        .alert-danger {
+            background: linear-gradient(135deg, #ffebee 0%, #fef5f5 100%);
+            color: #c62828;
+        }
+
+        /* 帮助提示 */
+        .help-tooltip {
+            position: relative;
+            display: inline-block;
+            cursor: pointer;
+            color: #667eea;
+            margin-left: 4px;
+        }
+
+        .help-tooltip:hover::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #333;
+            color: white;
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 11px;
+            white-space: nowrap;
+            z-index: 100;
+        }
+    </style>
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar">
+        <div class="container-fluid">
+            <div class="navbar-brand">
+                <i class="bi bi-globe"></i>
+                <h1>Proxy Gateway</h1>
+            </div>
+            <div class="nav-stats">
+                <div class="stat-item">
+                    <i class="bi bi-people"></i>
+                    <span id="connectionCount">连接数: --</span>
+                </div>
+                <div class="stat-item">
+                    <i class="bi bi-hdd"></i>
+                    <span id="memoryUsage">内存: --</span>
+                </div>
+                <button class="btn btn-sm btn-primary" id="reloadBtn" onclick="reloadConfig()" style="margin-left: 12px; padding: 6px 16px; font-size: 13px;">
+                    <i class="bi bi-arrow-clockwise"></i>
+                    重新加载配置
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主内容区域 -->
+    <div class="main-container">
+        <div class="wizard-card">
+            <!-- 步骤指示器 -->
+            <div class="stepper">
+                <div class="stepper-item active" id="stepper1">
+                    <div class="stepper-circle">1</div>
+                    <div class="stepper-label">API配置</div>
+                </div>
+                <div class="stepper-item" id="stepper2">
+                    <div class="stepper-circle">2</div>
+                    <div class="stepper-label">域名配置</div>
+                </div>
+                <div class="stepper-item" id="stepper3">
+                    <div class="stepper-circle">3</div>
+                    <div class="stepper-label">转发规则</div>
+                </div>
+                <div class="stepper-item" id="stepper4">
+                    <div class="stepper-circle">4</div>
+                    <div class="stepper-label">配置确认</div>
+                </div>
+            </div>
+
+            <!-- 步骤1: API配置 -->
+            <div class="step-content active" id="step1">
+                <div class="step-header">
+                    <h2><i class="bi bi-key"></i> API 配置</h2>
+                    <p>配置 Cloudflare API 凭据以自动管理 DNS 记录</p>
+                </div>
+
+                <div class="api-config-card">
+                    <div class="form-section">
+                        <div class="form-section-title">
+                            <i class="bi bi-shield-lock"></i>
+                            凭据信息
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label" for="apiToken">
+                                API Token
+                                <i class="bi bi-question-circle help-tooltip" data-tooltip="具有 DNS 编辑权限的 API Token"></i>
+                            </label>
+                            <input type="password" class="form-control" id="apiToken" placeholder="输入您的 Cloudflare API Token">
+                            <div class="form-text">在 Cloudflare 仪表板的 "我的个人资料" → "API 令牌" 中创建</div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label" for="apiEmail">
+                                邮箱地址
+                                <i class="bi bi-question-circle help-tooltip" data-tooltip="您的 Cloudflare 账户邮箱"></i>
+                            </label>
+                            <input type="email" class="form-control" id="apiEmail" placeholder="输入您的 Cloudflare 账户邮箱">
+                        </div>
+
+                        </div>
+
+                    <div class="d-grid gap-2 col-6 mx-auto">
+                        <button class="btn btn-primary" id="testConnectionBtn" onclick="testConnection()">
+                            <i class="bi bi-link-45deg"></i>
+                            测试连接
+                        </button>
+                    </div>
+
+                    <div class="connection-status" id="connectionStatus" style="display: none;">
+                        <i class="bi bi-circle-fill"></i>
+                        <span id="connectionStatusText">准备测试连接</span>
+                    </div>
+                </div>
+
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle"></i>
+                    <strong>提示：</strong>API Token 需要具有 DNS 编辑权限。建议使用受限令牌以提高安全性。
+                </div>
+            </div>
+
+            <!-- 步骤2: 域名配置 -->
+            <div class="step-content" id="step2">
+                <div class="step-header">
+                    <h2><i class="bi bi-globe2"></i> 域名配置</h2>
+                    <p>配置主域名和项目标签，用于生成访问地址</p>
+                </div>
+
+                <div class="domain-config-grid">
+                    <div class="form-section">
+                        <div class="form-section-title">
+                            <i class="bi bi-pencil-square"></i>
+                            域名信息
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label" for="domain">
+                                主域名
+                                <i class="bi bi-question-circle help-tooltip" data-tooltip="您拥有的顶级域名"></i>
+                            </label>
+                            <input type="text" class="form-control" id="domain" placeholder="example.com" oninput="updateDomainPreview()">
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label" for="projectTag">
+                                项目标签
+                                <i class="bi bi-question-circle help-tooltip" data-tooltip="用于标识项目，可留空"></i>
+                            </label>
+                            <input type="text" class="form-control" id="projectTag" placeholder="myproject" oninput="updateDomainPreview()">
+                            <div class="form-text">项目标签将用于区分不同的配置</div>
+                        </div>
+                    </div>
+
+                    <div class="domain-preview">
+                        <h4><i class="bi bi-eye"></i> 访问地址预览</h4>
+                        <p class="text-muted mb-3">您的服务将通过以下地址访问</p>
+                        <div class="preview-url" id="domainPreview">
+                            *.example.com
+                        </div>
+                        <div class="mt-3">
+                            <small class="text-muted">所有子域名都将通过 :443 端口访问</small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle"></i>
+                    <strong>提示：</strong>请确保您拥有该域名的管理权限，并且域名已托管在 Cloudflare。
+                </div>
+            </div>
+
+            <!-- 步骤3: 转发规则配置 -->
+            <div class="step-content" id="step3">
+                <div class="step-header">
+                    <h2><i class="bi bi-arrow-right-circle"></i> 转发规则配置</h2>
+                    <p>配置流量转发规则，将外部请求转发到内部服务器</p>
+                </div>
+
+                <div class="rules-toolbar">
+                    <h4><i class="bi bi-list-check"></i> 转发规则列表</h4>
+                    <div>
+                        <button class="btn btn-secondary" onclick="openImportModal()">
+                            <i class="bi bi-file-earmark-plus"></i>
+                            批量导入
+                        </button>
+                        <button class="btn btn-primary" onclick="addRule()">
+                            <i class="bi bi-plus-lg"></i>
+                            添加规则
+                        </button>
+                    </div>
+                </div>
+
+                <table class="rules-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 60px;">序号</th>
+                            <th style="width: 200px;">访问地址</th>
+                            <th style="width: 150px;">协议类型</th>
+                            <th style="width: 180px;">内网地址</th>
+                            <th style="width: 100px;">内网端口</th>
+                            <th style="width: 250px;">转发预览</th>
+                            <th style="width: 80px;">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="rulesTableBody">
+                        <!-- 规则行将通过 JavaScript 动态生成 -->
+                    </tbody>
+                </table>
+
+                <div id="noRulesMessage" style="text-align: center; padding: 40px; color: #999;">
+                    <i class="bi bi-inbox" style="font-size: 48px; margin-bottom: 16px; display: block;"></i>
+                    <p>暂无转发规则，请点击"添加规则"或"批量导入"开始配置</p>
+                </div>
+
+                <div class="protocol-info">
+                    <h5><i class="bi bi-info-circle"></i> 协议说明</h5>
+                    <p>
+                        <strong>HTTP：</strong>HTTPS 流量解密后转发为 HTTP 到内网服务器<br>
+                        <strong>WS：</strong>WSS 流量解密后转发为 WebSocket 到内网服务器<br>
+                        <strong>TCP：</strong>TLS 解密后转发原始 TCP 流量到内网服务器
+                    </p>
+                </div>
+            </div>
+
+            <!-- 步骤4: 配置确认 -->
+            <div class="step-content" id="step4">
+                <div class="step-header">
+                    <h2><i class="bi bi-check-circle"></i> 配置确认</h2>
+                    <p>请确认以下配置信息无误后生成配置文件</p>
+                </div>
+
+                <div class="summary-card collapsible" onclick="toggleSummaryCard(this)">
+                    <h4>
+                        <i class="bi bi-shield-lock"></i> API 配置
+                        <i class="bi bi-chevron-down collapse-icon"></i>
+                    </h4>
+                    <div class="summary-content">
+                        <div class="summary-item">
+                            <span class="summary-label">API Token:</span>
+                            <span class="summary-value" id="summaryApiToken">--</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">邮箱:</span>
+                            <span class="summary-value" id="summaryApiEmail">--</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="summary-card collapsible" onclick="toggleSummaryCard(this)">
+                    <h4>
+                        <i class="bi bi-globe2"></i> 域名配置
+                        <i class="bi bi-chevron-down collapse-icon"></i>
+                    </h4>
+                    <div class="summary-content">
+                        <div class="summary-item">
+                            <span class="summary-label">主域名:</span>
+                            <span class="summary-value" id="summaryDomain">--</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">项目标签:</span>
+                            <span class="summary-value" id="summaryProjectTag">--</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="summary-card collapsible" onclick="toggleSummaryCard(this)">
+                    <h4>
+                        <i class="bi bi-arrow-right-circle"></i> 转发规则
+                        <i class="bi bi-chevron-down collapse-icon"></i>
+                    </h4>
+                    <div class="summary-content" id="summaryRules">
+                        <!-- 规则摘要将通过 JavaScript 动态生成 -->
+                    </div>
+                </div>
+
+                <div class="alert alert-success">
+                    <i class="bi bi-check-circle"></i>
+                    <strong>准备就绪：</strong>确认以上信息无误后，点击"生成配置"按钮完成配置。
+                </div>
+            </div>
+
+            <!-- 底部按钮 -->
+            <div class="wizard-footer">
+                <button class="btn btn-secondary" id="btnBack" onclick="previousStep()">
+                    <i class="bi bi-arrow-left"></i>
+                    上一步
+                </button>
+                <button class="btn btn-primary" id="btnNext" onclick="nextStep()">
+                    下一步
+                    <i class="bi bi-arrow-right"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 文本导入模态框 -->
+    <div class="modal" id="importModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5><i class="bi bi-file-earmark-plus"></i> 批量导入转发规则</h5>
+                <button class="modal-close" onclick="closeImportModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">粘贴转发规则文本</label>
+                    <div class="alert alert-info" style="font-size: 13px; padding: 12px;">
+                        <strong>格式说明：</strong>每行一条规则，格式为 "外部协议://子域名 空格 内部协议://IP:端口"<br>
+                        <strong>示例：</strong>
+                        <code>https://api.example.com http://192.168.1.1:8080</code>
+                    </div>
+                    <textarea class="modal-textarea" id="importTextarea" placeholder="https://api.example.com http://192.168.1.1:8080
+wss://ws.example.com ws://192.168.1.2:8899
+tcp://game.example.com 192.168.1.3:9999"></textarea>
+                </div>
+                <div class="import-status" id="importStatus"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeImportModal()">取消</button>
+                <button class="btn btn-primary" onclick="importRules()">
+                    <i class="bi bi-upload"></i>
+                    导入规则
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript -->
+    <script src="/static/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // 全局状态管理
+        const state = {
+            currentStep: 1,
+            totalSteps: 4,
+            apiConfig: {
+                token: '',
+                email: '',
+                connected: false
+            },
+            domainConfig: {
+                domain: '',
+                projectTag: ''
+            },
+            rules: []
+        };
+
+        // 页面加载时初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            loadState();
+            updateUI();
+            updateStats();
+            setInterval(updateStats, 5000);
+        });
+
+        // 保存状态到 localStorage
+        function saveState() {
+            localStorage.setItem('proxyGatewayState', JSON.stringify(state));
+        }
+
+        // 从 localStorage 加载状态
+        function loadState() {
+            const saved = localStorage.getItem('proxyGatewayState');
+            if (saved) {
+                try {
+                    const parsed = JSON.parse(saved);
+                    Object.assign(state, parsed);
+                    
+                    // 恢复表单值
+                    if (state.apiConfig.token) document.getElementById('apiToken').value = state.apiConfig.token;
+                    if (state.apiConfig.email) document.getElementById('apiEmail').value = state.apiConfig.email;
+                    if (state.apiConfig.accountId) document.getElementById('accountId').value = state.apiConfig.accountId;
+                    if (state.domainConfig.domain) document.getElementById('domain').value = state.domainConfig.domain;
+                    if (state.domainConfig.projectTag) document.getElementById('projectTag').value = state.domainConfig.projectTag;
+
+                    
+                    renderRules();
+                    updateDomainPreview();
+                } catch (e) {
+                    console.error('加载状态失败:', e);
+                }
+            } else {
+                // 如果没有保存的状态，填充默认数据
+                fillDefaultData();
+            }
+        }
+
+        // 填充默认数据
+        function fillDefaultData() {
+            // 填充API配置默认值
+            state.apiConfig = {
+                token: 'your_cloudflare_api_token_here',
+                email: 'admin@example.com',
+                connected: false
+            };
+            
+            // 填充域名配置默认值
+            state.domainConfig = {
+                domain: 'example.com',
+                projectTag: 'myproject'
+            };
+            
+
+            
+            // 填充转发规则默认数据
+            state.rules = [
+                {
+                    id: 1,
+                    subdomain: 'api',
+                    protocol: 'http',
+                    internalAddress: '192.168.1.100',
+                    internalPort: '8080'
+                },
+                {
+                    id: 2,
+                    subdomain: 'ws',
+                    protocol: 'ws',
+                    internalAddress: '192.168.1.101',
+                    internalPort: '8081'
+                },
+                {
+                    id: 3,
+                    subdomain: 'game',
+                    protocol: 'tcp',
+                    internalAddress: '192.168.1.102',
+                    internalPort: '9999'
+                }
+            ];
+            
+            // 更新表单中的值
+            document.getElementById('apiToken').value = state.apiConfig.token;
+            document.getElementById('apiEmail').value = state.apiConfig.email;
+            document.getElementById('domain').value = state.domainConfig.domain;
+            document.getElementById('projectTag').value = state.domainConfig.projectTag;
+            
+
+            
+            // 更新域名预览
+            updateDomainPreview();
+            
+            // 渲染规则
+            renderRules();
+            
+            // 保存初始状态
+            saveState();
+        }
+
+        // 更新 UI
+        function updateUI() {
+            // 更新步骤指示器
+            for (let i = 1; i <= state.totalSteps; i++) {
+                const stepper = document.getElementById('stepper' + i);
+                const step = document.getElementById('step' + i);
+                
+                stepper.classList.remove('active', 'completed');
+                step.classList.remove('active');
+                
+                if (i === state.currentStep) {
+                    stepper.classList.add('active');
+                    step.classList.add('active');
+                } else if (i < state.currentStep) {
+                    stepper.classList.add('completed');
+                }
+            }
+            
+            // 更新按钮显示
+            document.getElementById('btnBack').style.display = 'block';
+            document.getElementById('btnBack').style.visibility = state.currentStep === 1 ? 'hidden' : 'visible';
+            const nextBtn = document.getElementById('btnNext');
+            
+            if (state.currentStep === state.totalSteps) {
+                nextBtn.innerHTML = '<i class="bi bi-check-lg"></i> 生成配置';
+                nextBtn.classList.remove('btn-primary');
+                nextBtn.classList.add('btn-success');
+            } else {
+                nextBtn.innerHTML = '下一步 <i class="bi bi-arrow-right"></i>';
+                nextBtn.classList.remove('btn-success');
+                nextBtn.classList.add('btn-primary');
+            }
+            
+            // 更新配置摘要
+            if (state.currentStep === state.totalSteps) {
+                updateSummary();
+            }
+        }
+
+        // 下一步
+        function nextStep() {
+            if (!validateStep(state.currentStep)) {
+                return;
+            }
+            
+            if (state.currentStep < state.totalSteps) {
+                state.currentStep++;
+                saveState();
+                updateUI();
+            } else {
+                generateConfig();
+            }
+        }
+
+        // 上一步
+        function previousStep() {
+            if (state.currentStep > 1) {
+                state.currentStep--;
+                saveState();
+                updateUI();
+            }
+        }
+
+        // 验证当前步骤
+        function validateStep(step) {
+            switch (step) {
+                case 1:
+                    if (!state.apiConfig.token) {
+                        alert('请输入 API Token');
+                        return false;
+                    }
+                    if (!state.apiConfig.email) {
+                        alert('请输入邮箱地址');
+                        return false;
+                    }
+                    break;
+                case 2:
+                    if (!state.domainConfig.domain) {
+                        alert('请输入主域名');
+                        return false;
+                    }
+                    break;
+
+                case 3:
+                    if (state.rules.length === 0) {
+                        alert('请至少添加一条转发规则');
+                        return false;
+                    }
+                    break;
+            }
+            return true;
+        }
+
+        // 测试连接
+        function testConnection() {
+            const token = document.getElementById('apiToken').value.trim();
+            const email = document.getElementById('apiEmail').value.trim();
+            
+            if (!token || !email) {
+                alert('请填写完整的 API 配置信息');
+                return;
+            }
+            
+            const statusDiv = document.getElementById('connectionStatus');
+            const statusText = document.getElementById('connectionStatusText');
+            const btn = document.getElementById('testConnectionBtn');
+            
+            statusDiv.style.display = 'flex';
+            statusDiv.className = 'connection-status testing';
+            statusText.innerHTML = '<div class="spinner-border spinner-border-sm me-2"></div> 正在测试连接...';
+            btn.disabled = true;
+            
+            // 调用后端真实验证 API
+            fetch('/api/validate-cloudflare', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    token: token,  // 使用新的参数名
+                    email: email   // 也发送邮箱（虽然后端可能不使用，但为了完整性）
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    statusDiv.className = 'connection-status success';
+                    statusText.innerHTML = '<i class="bi bi-check-circle-fill"></i> 连接成功';
+                    state.apiConfig.connected = true;
+                } else {
+                    statusDiv.className = 'connection-status error';
+                    statusText.innerHTML = '<i class="bi bi-exclamation-triangle-fill"></i> 连接失败: ' + (data.error || '验证失败');
+                    state.apiConfig.connected = false;
+                }
+                btn.disabled = false;
+                saveState();
+            })
+            .catch(error => {
+                console.error('验证连接时出错:', error);
+                statusDiv.className = 'connection-status error';
+                statusText.innerHTML = '<i class="bi bi-exclamation-triangle-fill"></i> 连接失败: 网络错误或服务不可用';
+                state.apiConfig.connected = false;
+                btn.disabled = false;
+                saveState();
+            });
+        }
+
+        // 更新域名预览
+        function updateDomainPreview() {
+            const domain = document.getElementById('domain').value.trim();
+            const projectTag = document.getElementById('projectTag').value.trim();
+            
+            state.domainConfig.domain = domain;
+            state.domainConfig.projectTag = projectTag;
+            
+            const preview = document.getElementById('domainPreview');
+            if (domain) {
+                if (projectTag) {
+                    preview.textContent = `${projectTag}*.${domain}`;
+                } else {
+                    preview.textContent = `*.${domain}`;
+                }
+            } else {
+                preview.textContent = '*.example.com';
+            }
+            
+            saveState();
+            renderRules();
+        }
+
+
+
+        // 添加规则
+        function addRule() {
+            const domain = state.domainConfig.domain;
+            if (!domain) {
+                alert('请先配置域名');
+                return;
+            }
+            
+            const rule = {
+                id: Date.now(),
+                subdomain: '',
+                protocol: 'http',
+                internalAddress: '',
+                internalPort: ''
+            };
+            
+            state.rules.push(rule);
+            saveState();
+            renderRules();
+        }
+
+        // 删除规则
+        function deleteRule(id) {
+            state.rules = state.rules.filter(r => r.id !== id);
+            saveState();
+            renderRules();
+        }
+
+        // 渲染规则表格
+        function renderRules() {
+            const tbody = document.getElementById('rulesTableBody');
+            const noRulesMsg = document.getElementById('noRulesMessage');
+            
+            if (state.rules.length === 0) {
+                tbody.innerHTML = '';
+                noRulesMsg.style.display = 'block';
+                return;
+            }
+            
+            noRulesMsg.style.display = 'none';
+            tbody.innerHTML = state.rules.map((rule, index) => {
+                const domain = state.domainConfig.domain;
+                const accessUrl = rule.subdomain ? `${rule.subdomain}.${domain}:443` : `${domain}:443`;
+                const preview = rule.internalAddress && rule.internalPort 
+                    ? `${accessUrl} → ${rule.internalAddress}:${rule.internalPort}` 
+                    : '待配置';
+                
+                return `
+                    <tr>
+                        <td>${index + 1}</td>
+                        <td>
+                            <input type="text" class="form-control form-control-sm" 
+                                   value="${rule.subdomain}" 
+                                   placeholder="子域名"
+                                   oninput="updateRule(${rule.id}, 'subdomain', this.value)">
+                        </td>
+                        <td>
+                            <div class="protocol-selector">
+                                <label class="protocol-option ${rule.protocol === 'http' ? 'active' : ''}">
+                                    <input type="radio" name="protocol-${rule.id}" 
+                                           value="http" ${rule.protocol === 'http' ? 'checked' : ''}
+                                           onchange="updateRule(${rule.id}, 'protocol', 'http')">
+                                    HTTP
+                                </label>
+                                <label class="protocol-option ${rule.protocol === 'ws' ? 'active' : ''}">
+                                    <input type="radio" name="protocol-${rule.id}" 
+                                           value="ws" ${rule.protocol === 'ws' ? 'checked' : ''}
+                                           onchange="updateRule(${rule.id}, 'protocol', 'ws')">
+                                    WS
+                                </label>
+                                <label class="protocol-option ${rule.protocol === 'tcp' ? 'active' : ''}">
+                                    <input type="radio" name="protocol-${rule.id}" 
+                                           value="tcp" ${rule.protocol === 'tcp' ? 'checked' : ''}
+                                           onchange="updateRule(${rule.id}, 'protocol', 'tcp')">
+                                    TCP
+                                </label>
+                            </div>
+                        </td>
+                        <td>
+                            <input type="text" class="form-control form-control-sm" 
+                                   value="${rule.internalAddress}" 
+                                   placeholder="IP地址"
+                                   oninput="updateRule(${rule.id}, 'internalAddress', this.value)">
+                        </td>
+                        <td>
+                            <input type="text" class="form-control form-control-sm" 
+                                   value="${rule.internalPort}" 
+                                   placeholder="端口"
+                                   style="width: 80px;"
+                                   oninput="updateRule(${rule.id}, 'internalPort', this.value)">
+                        </td>
+                        <td>
+                            <span class="preview-badge">${preview}</span>
+                        </td>
+                        <td>
+                            <button class="btn-delete" onclick="deleteRule(${rule.id})">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // 更新规则
+        function updateRule(id, field, value) {
+            const rule = state.rules.find(r => r.id === id);
+            if (rule) {
+                rule[field] = value;
+                saveState();
+                // 只更新预览信息，不重新渲染整个表格以避免失去焦点
+                updateRulePreview(id);
+            }
+        }
+
+        // 更新单个规则的预览信息
+        function updateRulePreview(id) {
+            const rule = state.rules.find(r => r.id === id);
+            if (!rule) return;
+
+            const index = state.rules.findIndex(r => r.id === id);
+            const domain = state.domainConfig.domain;
+            const accessUrl = rule.subdomain ? `${rule.subdomain}.${domain}:443` : `${domain}:443`;
+            const preview = rule.internalAddress && rule.internalPort 
+                ? `${accessUrl} → ${rule.internalAddress}:${rule.internalPort}` 
+                : '待配置';
+
+            // 查找预览元素并更新
+            const previewCell = document.querySelector(`tr:nth-child(${index + 1}) .preview-badge`);
+            if (previewCell) {
+                previewCell.textContent = preview;
+            }
+        }
+
+        // 打开导入模态框
+        function openImportModal() {
+            document.getElementById('importModal').classList.add('show');
+            document.getElementById('importStatus').style.display = 'none';
+        }
+
+        // 关闭导入模态框
+        function closeImportModal() {
+            document.getElementById('importModal').classList.remove('show');
+        }
+
+        // 导入规则
+        function importRules() {
+            const text = document.getElementById('importTextarea').value.trim();
+            const statusDiv = document.getElementById('importStatus');
+            
+            if (!text) {
+                statusDiv.className = 'import-status error';
+                statusDiv.textContent = '请输入要导入的规则文本';
+                statusDiv.style.display = 'block';
+                return;
+            }
+            
+            const lines = text.split('\n');
+            const imported = [];
+            const errors = [];
+            
+            lines.forEach((line, index) => {
+                line = line.trim();
+                if (!line) return;
+                
+                // 解析格式: 外部协议://子域名 空格 内部协议://IP:端口
+                const match = line.match(/^(\w+):\/\/([^\s]+)\s+(\w+):\/\/([^:]+):(\d+)$/);
+                if (match) {
+                    const [, externalProtocol, externalDomain, internalProtocol, internalIP, internalPort] = match;
+                    
+                    const rule = {
+                        id: Date.now() + index,
+                        subdomain: externalDomain.replace(/\.[^.]+\.[^.]+$/, ''), // 提取子域名
+                        protocol: internalProtocol,
+                        internalAddress: internalIP,
+                        internalPort: internalPort
+                    };
+                    
+                    imported.push(rule);
+                } else {
+                    errors.push(`第 ${index + 1} 行格式错误`);
+                }
+            });
+            
+            if (imported.length > 0) {
+                state.rules = [...state.rules, ...imported];
+                saveState();
+                renderRules();
+                
+                statusDiv.className = 'import-status success';
+                statusDiv.textContent = `成功导入 ${imported.length} 条规则`;
+                statusDiv.style.display = 'block';
+                
+                if (errors.length > 0) {
+                    statusDiv.textContent += `，${errors.length} 条规则格式错误`;
+                }
+                
+                setTimeout(() => {
+                    closeImportModal();
+                    document.getElementById('importTextarea').value = '';
+                }, 1500);
+            } else {
+                statusDiv.className = 'import-status error';
+                statusDiv.textContent = '导入失败，请检查格式是否正确';
+                statusDiv.style.display = 'block';
+            }
+        }
+
+        // 切换配置摘要卡片展开/收缩
+        function toggleSummaryCard(card) {
+            card.classList.toggle('collapsed');
+        }
+
+        // 更新配置摘要
+        function updateSummary() {
+            // 更新 API 配置摘要
+            const apiTokenEl = document.getElementById('summaryApiToken');
+            const apiEmailEl = document.getElementById('summaryApiEmail');
+            if (apiTokenEl) apiTokenEl.textContent = state.apiConfig.token ? '••••••••' + state.apiConfig.token.slice(-8) : '--';
+            if (apiEmailEl) apiEmailEl.textContent = state.apiConfig.email || '--';
+            
+            // 更新域名配置摘要
+            const domainEl = document.getElementById('summaryDomain');
+            const projectTagEl = document.getElementById('summaryProjectTag');
+            if (domainEl) domainEl.textContent = state.domainConfig.domain || '--';
+            if (projectTagEl) projectTagEl.textContent = state.domainConfig.projectTag || '--';
+            
+            // 更新转发规则摘要
+            const rulesDiv = document.getElementById('summaryRules');
+            if (!rulesDiv) return;
+            
+            if (state.rules.length > 0) {
+                rulesDiv.innerHTML = state.rules.map((rule, index) => {
+                    const domain = state.domainConfig.domain || 'example.com';
+                    const accessUrl = rule.subdomain ? `${rule.subdomain}.${domain}:443` : `${domain}:443`;
+                    const internalAddr = rule.internalAddress || '--';
+                    const internalPort = rule.internalPort || '--';
+                    const protocol = rule.protocol || 'http';
+                    return `
+                        <div class="summary-item">
+                            <span class="summary-label">规则 ${index + 1}:</span>
+                            <span class="summary-value">${accessUrl} → ${internalAddr}:${internalPort} (${protocol.toUpperCase()})</span>
+                        </div>
+                    `;
+                }).join('');
+            } else {
+                rulesDiv.innerHTML = '<p style="color: #999; padding: 10px 0;">暂无转发规则</p>';
+            }
+        }
+
+        // 生成配置
+        function generateConfig() {
+            const btn = document.getElementById('btnNext');
+            const originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<div class="spinner-border spinner-border-sm me-2"></div> 正在生成配置...';
+
+            // 构建请求数据
+            const requestData = {
+                api_token: state.apiConfig.token,
+                api_email: state.apiConfig.email,
+                domain: state.domainConfig.domain,
+                project_tag: state.domainConfig.projectTag,
+                rules: state.rules
+            };
+
+            // 调用后端 API 生成配置
+            fetch('/api/generate-wizard-config', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(requestData)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    // 显示配置内容在预览区域，并弹出保存对话框
+                    showSaveConfigModal(data.data.config);
+                } else {
+                    throw new Error(data.error || '生成配置失败');
+                }
+            })
+            .catch(error => {
+                console.error('配置生成失败:', error);
+                alert('配置生成失败: ' + error.message);
+            })
+            .finally(() => {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            });
+        }
+
+        // 显示保存配置的模态框
+        let pendingConfigContent = ''; // 存储待保存的配置内容
+        
+        function showSaveConfigModal(configContent) {
+            // 将配置内容存储在全局变量中
+            pendingConfigContent = configContent;
+            
+            // 创建保存配置的模态框
+            const modalHtml = `
+                <div class="modal show" id="saveConfigModal" style="z-index: 3000;">
+                    <div class="modal-content" style="max-width: 900px;">
+                        <div class="modal-header">
+                            <h5><i class="bi bi-file-earmark-code"></i> 保存配置文件</h5>
+                            <button class="modal-close" onclick="closeSaveConfigModal()">&times;</button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <label class="form-label">配置文件名</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">/etc/tls-shunt-proxy/</span>
+                                    <input type="text" class="form-control" id="configFileName"
+                                           value="config.yaml" placeholder="输入文件名（如：my-config.yaml）">
+                                </div>
+                                <div class="form-text">文件名以 .yaml 或 .yml 结尾，如果已存在同名文件将被覆盖</div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">配置内容预览</label>
+                                <textarea class="modal-textarea" id="configPreview"
+                                          style="min-height: 300px; font-size: 11px;" readonly>${escapeHtml(configContent)}</textarea>
+                            </div>
+                            <div class="save-status" id="saveStatus" style="display: none;"></div>
+                        </div>
+                        <div class="modal-footer">
+                            <button class="btn btn-secondary" onclick="closeSaveConfigModal()">取消</button>
+                            <button class="btn btn-success" id="saveConfigBtn" onclick="saveConfigFile()">
+                                <i class="bi bi-check-lg"></i> 保存配置
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // 检查是否已存在模态框，避免重复创建
+            const existingModal = document.getElementById('saveConfigModal');
+            if (existingModal) {
+                existingModal.remove();
+            }
+
+            // 添加到页面
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+            // 确保输入框获得焦点
+            setTimeout(() => {
+                const fileNameInput = document.getElementById('configFileName');
+                if (fileNameInput) {
+                    fileNameInput.focus();
+                    fileNameInput.select();
+                }
+            }, 100);
+        }
+
+        // 关闭保存配置模态框
+        function closeSaveConfigModal() {
+            const modal = document.getElementById('saveConfigModal');
+            if (modal) {
+                modal.remove();
+            }
+            // 清空待保存的配置
+            pendingConfigContent = '';
+        }
+
+        // 保存配置文件
+        function saveConfigFile() {
+            const configFileName = document.getElementById('configFileName').value.trim();
+            const saveStatus = document.getElementById('saveStatus');
+            const saveBtn = document.getElementById('saveConfigBtn');
+
+            if (!configFileName) {
+                saveStatus.className = 'save-status error';
+                saveStatus.style.display = 'block';
+                saveStatus.innerHTML = '<i class="bi bi-exclamation-triangle-fill"></i> 请输入配置文件名';
+                saveStatus.style.background = '#ffebee';
+                saveStatus.style.color = '#c2828';
+                saveStatus.style.padding = '10px 14px';
+                saveStatus.style.borderRadius = '6px';
+                return;
+            }
+
+            // 禁用按钮，显示加载状态
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '<div class="spinner-border spinner-border-sm me-2"></div> 保存中...';
+
+            console.log('开始保存配置:', {
+                fileName: configFileName,
+                configLength: pendingConfigContent.length
+            });
+
+            // 调用后端 API 保存配置
+            fetch('/api/save-strategy-config', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    config: pendingConfigContent,
+                    config_name: configFileName
+                })
+            })
+            .then(response => {
+                console.log('保存配置响应状态:', response.status);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('保存配置响应数据:', data);
+                if (data.success) {
+                    saveStatus.className = 'save-status success';
+                    saveStatus.style.display = 'block';
+                    saveStatus.innerHTML = '<i class="bi bi-check-circle-fill"></i> 配置保存成功！文件路径: ' + (data.data?.path || '/etc/tls-shunt-proxy/' + configFileName);
+                    saveStatus.style.background = '#e8f5e9';
+                    saveStatus.style.color = '#2e7d32';
+                    saveStatus.style.padding = '10px 14px';
+                    saveStatus.style.borderRadius = '6px';
+
+                    // 2秒后关闭模态框并重置
+                    setTimeout(() => {
+                        closeSaveConfigModal();
+                        // 清除保存的状态
+                        localStorage.removeItem('proxyGatewayState');
+                        // 重置向导状态
+                        state.currentStep = 1;
+                        updateUI();
+                        fillDefaultData();
+                    }, 2000);
+                } else {
+                    throw new Error(data.error || '保存配置失败');
+                }
+            })
+            .catch(error => {
+                console.error('保存配置失败:', error);
+                saveStatus.className = 'save-status error';
+                saveStatus.style.display = 'block';
+                saveStatus.innerHTML = '<i class="bi bi-exclamation-triangle-fill"></i> 保存失败: ' + error.message;
+                saveStatus.style.background = '#ffebee';
+                saveStatus.style.color = '#c2828';
+                saveStatus.style.padding = '10px 14px';
+                saveStatus.style.borderRadius = '6px';
+            })
+            .finally(() => {
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = '<i class="bi bi-check-lg"></i> 保存配置';
+            });
+        }
+
+        // HTML 转义函数
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // 重新加载配置文件
+        function reloadConfig() {
+            const btn = document.getElementById('reloadBtn');
+            const originalText = btn.innerHTML;
+            const originalClass = btn.className;
+            
+            // 禁用按钮，显示加载状态
+            btn.disabled = true;
+            btn.innerHTML = '<div class="spinner-border spinner-border-sm me-2"></div> 重载中...';
+            btn.classList.remove('btn-primary');
+            btn.classList.add('btn-secondary');
+            
+            // 调用后端 API 重新加载配置
+            fetch('/api/reload', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    // 显示成功状态
+                    btn.innerHTML = '<i class="bi bi-check-circle-fill"></i> 重载成功';
+                    btn.classList.remove('btn-secondary');
+                    btn.classList.add('btn-success');
+                    
+                    // 3秒后恢复按钮
+                    setTimeout(() => {
+                        btn.disabled = false;
+                        btn.innerHTML = originalText;
+                        btn.classList.remove('btn-success');
+                        btn.classList.add('btn-primary');
+                    }, 3000);
+                } else {
+                    throw new Error(data.error || '重新加载配置失败');
+                }
+            })
+            .catch(error => {
+                console.error('重新加载配置失败:', error);
+                // 显示错误状态
+                btn.innerHTML = '<i class="bi bi-exclamation-triangle-fill"></i> 重载失败';
+                btn.classList.remove('btn-secondary');
+                btn.classList.add('btn-danger');
+                
+                // 3秒后恢复按钮
+                setTimeout(() => {
+                    btn.disabled = false;
+                    btn.innerHTML = originalText;
+                    btn.classList.remove('btn-danger');
+                    btn.classList.add('btn-primary');
+                }, 3000);
+                
+                alert('重新加载配置失败: ' + error.message);
+            });
+        }
+
+        // 更新统计信息
+        function updateStats() {
+            // 模拟统计数据
+            document.getElementById('connectionCount').textContent = '连接数: ' + Math.floor(Math.random() * 100);
+            document.getElementById('memoryUsage').textContent = '内存: ' + (Math.random() * 100).toFixed(1) + ' MB';
+        }
+
+        // 监听表单输入
+        document.getElementById('apiToken').addEventListener('input', function() {
+            state.apiConfig.token = this.value.trim();
+            saveState();
+        });
+
+        document.getElementById('apiEmail').addEventListener('input', function() {
+            state.apiConfig.email = this.value.trim();
+            saveState();
+        });
+
+        // 键盘导航
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && e.ctrlKey) {
+                if (state.currentStep < state.totalSteps) {
+                    nextStep();
+                } else {
+                    generateConfig();
+                }
+            }
+        });
+    </script>
+</body>
+</html>

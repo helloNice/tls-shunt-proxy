@@ -1,0 +1,58 @@
+listen: 0.0.0.0:443
+redirecthttps: 0.0.0.0:80
+inboundbuffersize: 4
+outboundbuffersize: 32
+fallback: 127.0.0.1:8443
+webui_listen: 127.0.0.1:8080
+
+# cloudflare认证成功，生成下面块
+wildcard_certs:
+  - domain: "*.{{ DOMAIN }}"  ## DOMAIN = hynjhaiwk.com
+    dns_provider: "cloudflare"  ## 默认固定
+    dns_credentials: '{"api_token": "{{ TOKEN }}"}'
+    ca_provider: "letsencrypt"  ## 默认固定
+    enable_backup_ca: false  ## 默认固定
+
+vhosts:
+
+  # 添加了几个转发规则，就添加几个vhost块。且根据不同的协议类型来生成不同的转发块配置
+
+  ## 如果是HTTP代理，生成的配置如下：
+  - name: web.{{ DOMAIN }}
+    tlsoffloading: true  ## 默认固定
+    managedcert: true    ## 默认固定
+    keytype: p256         ## 默认固定
+    alpn: http/1.1,h2     ## 默认固定
+    protocols: tls12,tls13  ## 默认固定
+    http:
+      handler: proxyPass
+      args: 127.0.0.1:8080
+
+  ## 如果是TCP代理，生成的配置如下：
+  - name: api.{{ DOMAIN }}
+    tlsoffloading: true  ## 默认固定
+    managedcert: true    ## 默认固定
+    keytype: p256         ## 默认固定
+    alpn: http/1.1,h2     ## 默认固定
+    protocols: tls12,tls13  ## 默认固定
+    default:
+      handler: proxyPass
+      args: 127.0.0.1:8443
+
+  ## 如果是websocket代理，生成的配置如下：
+  - name: ws.{{ DOMAIN }}
+    tlsoffloading: true  ## 默认固定
+    managedcert: true    ## 默认固定
+    keytype: p256         ## 默认固定
+    alpn: http/1.1,h2     ## 默认固定
+    protocols: tls12,tls13  ## 默认固定
+    default:
+      handler: proxyPass
+      args: 127.0.0.1:8443
+
+
+
+
+
+
+
