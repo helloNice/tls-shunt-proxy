@@ -121,7 +121,7 @@ GOOS=linux GOARCH=amd64 go build -o tls-shunt-proxy-linux-amd64 main.go
 对于 linux-amd64 平台，可以使用提供的安装脚本：
 
 ```bash
-bash <(curl -L -s https://raw.githubusercontent.com/liberal-boy/tls-shunt-proxy/master/dist/install.sh)
+bash <(curl -L -s https://gitee.com/feixion/tls-shunt-proxy/raw/master/dist/install.sh)
 ```
 
 安装后：

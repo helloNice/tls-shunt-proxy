@@ -1,6 +1,6 @@
 [Unit]
 Description=TLS Shunt Proxy Service
-Documentation=https://github.com/liberal-boy/tls-shunt-proxy/blob/master/README.md
+Documentation=https://gitee.com/feixion/tls-shunt-proxy
 After=network.target
 Wants=network-online.target
 

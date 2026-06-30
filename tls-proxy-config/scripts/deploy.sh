@@ -16,7 +16,7 @@ INSTALL_DIR="/usr/local/bin"
 CONFIG_DIR="/etc/tls-shunt-proxy"
 CONFIG_FILE="$CONFIG_DIR/config.yaml"
 SERVICE_FILE="/etc/systemd/system/tls-shunt-proxy.service"
-REPO_URL="https://github.com/liberal-boy/tls-shunt-proxy.git"
+REPO_URL="https://gitee.com/feixion/tls-shunt-proxy.git"
 
 # Functions
 log_info() {

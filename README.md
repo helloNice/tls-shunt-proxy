@@ -10,7 +10,7 @@
 ## 下载安装
 对于 linux-amd64 可以使用脚本安装，以 root 身份执行以下命令
 ```shell script
-bash <(curl -L -s https://raw.githubusercontent.com/liberal-boy/tls-shunt-proxy/master/dist/install.sh)
+bash <(curl -L -s https://gitee.com/feixion/tls-shunt-proxy/raw/master/dist/install.sh)
 ```
 * 配置文件位于 `/etc/tls-shunt-proxy/config.yaml`
 
@@ -128,7 +128,7 @@ GOOS=linux GOARCH=arm64 go build -o tls-shunt-proxy-linux-arm64 main.go
 
 ```bash
 # 克隆项目
-git clone https://github.com/liberal-boy/tls-shunt-proxy.git
+git clone https://gitee.com/feixion/tls-shunt-proxy.git
 cd tls-shunt-proxy
 
 # 运行部署脚本（需要 root 权限）
